@@ -65,10 +65,12 @@ android {
 
 // Debug builds remain usable for local development; release builds must have
 // an explicit upload keystore and are blocked otherwise.
-tasks.named("assembleRelease") {
-    doFirst {
-        check(keystorePropertiesFile.exists()) {
-            "Release signing is not configured. Create android/key.properties locally or provide CI signing secrets."
+tasks.configureEach {
+    if (name == "assembleRelease") {
+        doFirst {
+            check(keystorePropertiesFile.exists()) {
+                "Release signing is not configured. Create android/key.properties locally or provide CI signing secrets."
+            }
         }
     }
 }
