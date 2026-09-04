@@ -87,6 +87,25 @@ class BhashaImeService : InputMethodService() {
             channel.setMethodCallHandler { call, result ->
                 val ic = currentInputConnection
                 when (call.method) {
+                    "replaceRange" -> {
+                        val start = call.argument<Int>("start") ?: 0
+                        val end = call.argument<Int>("end") ?: start
+                        val text = call.argument<String>("text") ?: ""
+                        if (ic != null) {
+                            markSelfInitiatedChange()
+                            ic.beginBatchEdit()
+                            // Select exactly the stale range in the host field,
+                            // then replace it atomically. This is safe for
+                            // insertion, deletion, and replacement in the
+                            // middle of existing text; unlike deleting from
+                            // the current caret, it cannot consume the wrong
+                            // side of the buffer.
+                            ic.setSelection(start, end)
+                            ic.commitText(text, 1)
+                            ic.endBatchEdit()
+                        }
+                        result.success(true)
+                    }
                     "applyDiff" -> {
                         val delete = call.argument<Int>("delete") ?: 0
                         val insert = call.argument<String>("insert") ?: ""

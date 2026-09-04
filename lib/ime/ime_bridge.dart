@@ -156,7 +156,12 @@ class ImeBridge {
       return;
     }
 
-    // Compute common prefix.
+    // Compute the smallest changed range using both a common prefix and a
+    // common suffix. The previous implementation deleted everything after
+    // the prefix from the host caret and inserted the new tail. That only
+    // worked at the end of the buffer; in the middle it could delete the
+    // wrong side of the caret and then replay the unchanged tail, causing
+    // cursor jumps and duplication.
     var prefix = 0;
     final minLen = now.length < _lastSynced.length
         ? now.length
@@ -165,14 +170,27 @@ class ImeBridge {
         now.codeUnitAt(prefix) == _lastSynced.codeUnitAt(prefix)) {
       prefix++;
     }
-    // Avoid splitting a surrogate pair at the boundary.
+    var suffix = 0;
+    while (suffix < now.length - prefix &&
+        suffix < _lastSynced.length - prefix &&
+        now.codeUnitAt(now.length - 1 - suffix) ==
+            _lastSynced.codeUnitAt(_lastSynced.length - 1 - suffix)) {
+      suffix++;
+    }
+
+    // Avoid splitting a surrogate pair at either boundary.
     if (prefix > 0 && prefix < now.length) {
       final cu = now.codeUnitAt(prefix - 1);
       if (cu >= 0xD800 && cu <= 0xDBFF) prefix--;
     }
+    if (suffix > 0 && suffix < now.length) {
+      final cu = now.codeUnitAt(now.length - suffix);
+      if (cu >= 0xDC00 && cu <= 0xDFFF) suffix--;
+    }
 
-    final deleteCount = _lastSynced.length - prefix;
-    final insertText = now.substring(prefix);
+    final oldEnd = _lastSynced.length - suffix;
+    final insertEnd = now.length - suffix;
+    final insertText = now.substring(prefix, insertEnd);
 
     _lastSynced = now;
     _lastSelectionStart = selectionStart;
@@ -182,9 +200,10 @@ class ImeBridge {
     // main cause of cursor jumps after paste/transliteration.
     _editQueue = _editQueue.then((_) async {
       try {
-        await _channel.invokeMethod('applyDiff', {
-          'delete': deleteCount,
-          'insert': insertText,
+        await _channel.invokeMethod('replaceRange', {
+          'start': prefix,
+          'end': oldEnd,
+          'text': insertText,
         });
       } catch (_) {
         // The host may have closed the field; the next startInput will
