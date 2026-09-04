@@ -7,8 +7,12 @@ library;
 
 class GeminiKeyPool {
   GeminiKeyPool(List<String> keys)
-      : _keys = List.unmodifiable(keys.where((k) => k.trim().isNotEmpty).isEmpty ? [''] : keys.where((k) => k.trim().isNotEmpty)),
-        assert(keys.isNotEmpty);
+    : _keys = List.unmodifiable(
+        keys.where((k) => k.trim().isNotEmpty).isEmpty
+            ? ['']
+            : keys.where((k) => k.trim().isNotEmpty),
+      ),
+      assert(keys.isNotEmpty);
 
   factory GeminiKeyPool.production() {
     const configured = String.fromEnvironment('GEMINI_API_KEYS');
@@ -48,12 +52,18 @@ class GeminiKeyPool {
   }
 
   static bool isKeyError({String? message, int? httpStatus}) {
-    if (httpStatus == 401 || httpStatus == 403 || httpStatus == 429) return true;
+    if (httpStatus == 401 || httpStatus == 403 || httpStatus == 429)
+      return true;
     final m = (message ?? '').toLowerCase();
-    return m.contains('unauthorized') || m.contains('forbidden') ||
-        m.contains('invalid api key') || m.contains('invalid_api_key') ||
-        m.contains('api_key_invalid') || m.contains('quota') ||
-        m.contains('credit') || m.contains('rate limit') ||
-        m.contains('too many requests') || m.contains('resource_exhausted');
+    return m.contains('unauthorized') ||
+        m.contains('forbidden') ||
+        m.contains('invalid api key') ||
+        m.contains('invalid_api_key') ||
+        m.contains('api_key_invalid') ||
+        m.contains('quota') ||
+        m.contains('credit') ||
+        m.contains('rate limit') ||
+        m.contains('too many requests') ||
+        m.contains('resource_exhausted');
   }
 }

@@ -12,7 +12,11 @@ library;
 
 class SarvamKeyPool {
   SarvamKeyPool(List<String> keys)
-    : _keys = List.unmodifiable(keys.where((k) => k.trim().isNotEmpty).isEmpty ? [''] : keys.where((k) => k.trim().isNotEmpty)),
+    : _keys = List.unmodifiable(
+        keys.where((k) => k.trim().isNotEmpty).isEmpty
+            ? ['']
+            : keys.where((k) => k.trim().isNotEmpty),
+      ),
       assert(keys.isNotEmpty);
 
   factory SarvamKeyPool.production() {
@@ -89,5 +93,4 @@ class SarvamKeyPool {
         m.contains('too many requests') ||
         m.contains('insufficient');
   }
-
 }

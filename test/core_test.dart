@@ -36,21 +36,24 @@ void main() {
       kb.dispose();
     });
 
-    test('moving into existing text clears composing anchor and does not duplicate it', () {
-      final kb = KeyboardController();
-      kb.insertText('Hello');
-      kb.insertText(' ');
-      kb.insertText('Bharat');
+    test(
+      'moving into existing text clears composing anchor and does not duplicate it',
+      () {
+        final kb = KeyboardController();
+        kb.insertText('Hello');
+        kb.insertText(' ');
+        kb.insertText('Bharat');
 
-      // Move to the start as the text-editing tools do, then type again.
-      // The old composing word must not be pasted/replayed at the new cursor.
-      kb.moveCursorToStart();
-      kb.insertText('Namaste ');
+        // Move to the start as the text-editing tools do, then type again.
+        // The old composing word must not be pasted/replayed at the new cursor.
+        kb.moveCursorToStart();
+        kb.insertText('Namaste ');
 
-      expect(kb.editor.text, 'Namaste Hello Bharat');
-      expect(kb.editor.text, isNot(contains('BharatHello')));
-      kb.dispose();
-    });
+        expect(kb.editor.text, 'Namaste Hello Bharat');
+        expect(kb.editor.text, isNot(contains('BharatHello')));
+        kb.dispose();
+      },
+    );
 
     test('moving one cursor step invalidates the old composing word', () {
       final kb = KeyboardController();

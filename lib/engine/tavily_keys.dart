@@ -12,7 +12,11 @@ library;
 
 class TavilyKeyPool {
   TavilyKeyPool(List<String> keys)
-    : _keys = List.unmodifiable(keys.where((k) => k.trim().isNotEmpty).isEmpty ? [''] : keys.where((k) => k.trim().isNotEmpty)),
+    : _keys = List.unmodifiable(
+        keys.where((k) => k.trim().isNotEmpty).isEmpty
+            ? ['']
+            : keys.where((k) => k.trim().isNotEmpty),
+      ),
       assert(keys.isNotEmpty);
 
   factory TavilyKeyPool.production() {
@@ -78,5 +82,4 @@ class TavilyKeyPool {
         m.contains('rate limit') ||
         m.contains('too many requests');
   }
-
 }
