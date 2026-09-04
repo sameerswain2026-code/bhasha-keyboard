@@ -52,8 +52,9 @@ class GeminiKeyPool {
   }
 
   static bool isKeyError({String? message, int? httpStatus}) {
-    if (httpStatus == 401 || httpStatus == 403 || httpStatus == 429)
+    if (httpStatus == 401 || httpStatus == 403 || httpStatus == 429) {
       return true;
+    }
     final m = (message ?? '').toLowerCase();
     return m.contains('unauthorized') ||
         m.contains('forbidden') ||
