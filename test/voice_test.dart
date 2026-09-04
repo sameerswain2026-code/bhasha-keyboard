@@ -161,6 +161,26 @@ void main() {
     });
 
     test(
+      'keypress cancellation is immediate and discards pending voice text',
+      () async {
+        final fake = FakeSpeechProvider();
+        final v = VoiceEngine(provider: fake);
+        final finals = <String>[];
+        v.onFinalText = finals.add;
+        await v.startSession(en);
+        fake.emitPartial('unfinished keypress text');
+
+        v.cancelForKeyPress();
+
+        expect(v.state, VoiceState.idle);
+        expect(v.partialText, isEmpty);
+        expect(finals, isEmpty);
+        expect(fake.stopped, isTrue);
+        v.dispose();
+      },
+    );
+
+    test(
       'init failure produces actionable error then recovers to idle',
       () async {
         final fake = FakeSpeechProvider()..initShouldFail = true;

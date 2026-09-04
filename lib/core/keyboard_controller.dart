@@ -1565,13 +1565,13 @@ class KeyboardController extends ChangeNotifier {
   /// fallback above.
   bool get _serverSideTranslateSupported => voice.hasNativeTranslateMode;
 
-  /// Stops voice before a keyboard edit is applied. Awaiting the stop is
-  /// important: stopSession flushes the recognizer's final partial result.
-  /// If the key edit runs first, that late result can be inserted at a stale
-  /// cursor and cause the reported cursor jump/automatic deletion.
+  /// Cancels voice before a keyboard edit is applied. Key taps must not wait
+  /// for the provider's network flush window: that made every key appear
+  /// unresponsive while listening. The key-interaction path discards the
+  /// partial voice result and stops the provider asynchronously.
   Future<void> keyPressedDuringVoice() async {
     if (voice.isActive) {
-      await voice.stopSession(reason: 'keypress');
+      voice.cancelForKeyPress();
     }
   }
 
