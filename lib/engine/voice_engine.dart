@@ -332,15 +332,16 @@ class VoiceEngine extends ChangeNotifier {
     _finishSession();
   }
 
-  /// Cancels voice immediately for a keyboard key interaction. Unlike a
-  /// manual stop, this deliberately discards the partial transcript: waiting
-  /// for provider flush/finalization here blocks the key tap and a late voice
-  /// result could be inserted at the caret after the user's key edit.
+  /// Cancels voice immediately for a keyboard key interaction. It commits the
+  /// latest partial transcript synchronously, then stops the provider
+  /// asynchronously, so the key tap is not blocked by network finalization.
   void cancelForKeyPress() {
     if (!isActive) return;
     _cancelled = true;
     _silenceTimer?.cancel();
+    final pending = _partialText.trim();
     _partialText = '';
+    if (pending.isNotEmpty) onFinalText?.call(pending);
     _finishSession();
     unawaited(_provider.stop().catchError((_) {}));
   }

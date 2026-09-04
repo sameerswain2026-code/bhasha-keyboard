@@ -161,7 +161,7 @@ void main() {
     });
 
     test(
-      'keypress cancellation is immediate and discards pending voice text',
+      'keypress cancellation is immediate and preserves pending voice text',
       () async {
         final fake = FakeSpeechProvider();
         final v = VoiceEngine(provider: fake);
@@ -174,7 +174,7 @@ void main() {
 
         expect(v.state, VoiceState.idle);
         expect(v.partialText, isEmpty);
-        expect(finals, isEmpty);
+        expect(finals, ['unfinished keypress text']);
         expect(fake.stopped, isTrue);
         v.dispose();
       },
