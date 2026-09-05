@@ -302,7 +302,12 @@ class BhashaImeService : InputMethodService() {
             v.setPadding(0, 0, 0, navBarBottom)
             v.minimumHeight = heightPx + navBarBottom
             v.requestLayout()
-            insets
+            // The IME root has explicitly consumed the navigation-bar inset
+            // above. Returning the original insets lets some Android/OEM
+            // windows apply the same bottom inset a second time, which can
+            // push the last key row below the navigation bar after a system
+            // dark/light-mode change.
+            WindowInsetsCompat.CONSUMED
         }
 
         return root

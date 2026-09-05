@@ -1243,6 +1243,10 @@ class KeyboardController extends ChangeNotifier {
 
   /// Returns a human description of what Enter did (for status/testing).
   String pressEnter() {
+    // The IME action key is also a real keyboard interaction. Stop an active
+    // voice session here as a defensive guard, even if a host widget invokes
+    // pressEnter directly instead of going through the key-row callback.
+    if (voice.isActive) voice.cancelForKeyPress();
     _feedback();
     _commitComposing();
     switch (_editorAction) {

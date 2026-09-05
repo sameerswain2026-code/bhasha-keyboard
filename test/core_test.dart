@@ -89,6 +89,11 @@ void main() {
       expect(kNumeric.rows[0], containsAll(['1', '5', '0']));
       expect(kNumeric.rows[1], contains('₹'));
     });
+
+    test('symbols layout contains common slash and shell symbols', () {
+      final symbols = kSymbols.rows.expand((row) => row).toSet();
+      expect(symbols, containsAll(['/', '\\', '<', '>', '{', '}', '[', ']']));
+    });
   });
 
   group('Gate A: Shift and Caps Lock (P0)', () {

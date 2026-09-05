@@ -24,9 +24,9 @@ const LayoutRows kNumeric = LayoutRows([
 
 /// Symbols layer.
 const LayoutRows kSymbols = LayoutRows([
-  ['~', '`', '|', '•', '√', 'π', '÷', '×', '¶', '∆'],
-  ['£', '€', '\$', '¢', '^', '°', '=', '{', '}'],
-  ['%', '©', '®', '™', '✓', '[', ']'],
+  ['/', '\\', '<', '>', '_', '&', '@', '#', '~', '`'],
+  ['|', '•', '√', 'π', '÷', '×', '±', '^', '=', '%'],
+  ['{', '}', '[', ']', '(', ')', '£', '€', '\$', '¢'],
 ]);
 
 /// Native script layouts (InScript-inspired simplified, 3 rows).
