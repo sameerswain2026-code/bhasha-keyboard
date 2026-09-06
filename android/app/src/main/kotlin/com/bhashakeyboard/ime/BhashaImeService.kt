@@ -4,11 +4,14 @@ import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputContentInfo
 import android.widget.FrameLayout
 import android.speech.tts.TextToSpeech
 import java.util.Locale
@@ -214,6 +217,31 @@ class BhashaImeService : InputMethodService() {
                     result.success(true)
                 }
                 "isImeEnabled", "isImeSelected" -> result.success(true)
+                else -> result.notImplemented()
+            }
+        }
+
+        // Files are handed to the current app using Android's IME content
+        // API. No file bytes are read by Bhasha and no upload is sent to a
+        // Bhasha server. Authentication is intentionally unavailable from
+        // an IME service; Flutter reports this and falls back gracefully.
+        MethodChannel(
+            engine.dartExecutor.binaryMessenger, "bhasha/documents"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "authenticateDocument" -> result.success(false)
+                "commitDocument" -> {
+                    val uri = call.argument<String>("uri")?.let(Uri::parse)
+                    val mime = call.argument<String>("mimeType") ?: "application/octet-stream"
+                    val description = call.argument<String>("displayName") ?: "Document"
+                    val ic = currentInputConnection
+                    if (uri == null || ic == null || android.os.Build.VERSION.SDK_INT < 25) {
+                        result.success(false)
+                    } else {
+                        val content = InputContentInfo(uri, android.content.ClipDescription(description, arrayOf(mime)), null)
+                        result.success(ic.commitContent(content, 1, Bundle()))
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

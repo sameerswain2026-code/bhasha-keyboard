@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/languages.dart';
 import '../engine/ai_assistant_engine.dart';
 import '../engine/ai_command_capture.dart';
+import '../engine/document_manager.dart';
 import '../engine/suggestion_engine.dart';
 import '../engine/transliterator.dart';
 import '../engine/translation_engine.dart';
@@ -39,6 +40,7 @@ enum ActivePanel {
   language, // Keyboard TYPING language (independent of mic), via long-press
   settings,
   theme,
+  documents,
 }
 
 /// One-handed mode side.
@@ -67,9 +69,11 @@ class KeyboardController extends ChangeNotifier {
     VoiceEngine? voiceEngine,
     AiAssistantEngine? aiEngine,
     AiCommandCapture? aiCapture,
+    DocumentManager? documentManager,
   }) : voice = voiceEngine ?? VoiceEngine(),
        _ai = aiEngine ?? AiAssistantEngine(),
-       _aiCapture = aiCapture ?? AiCommandCapture() {
+       _aiCapture = aiCapture ?? AiCommandCapture(),
+       documents = documentManager ?? DocumentManager() {
     voice.onFinalText = _onVoiceFinal;
     voice.onPartialText = (_) => notifyListeners();
     voice.onSessionEnd = _onVoiceSessionEnd;
@@ -90,6 +94,7 @@ class KeyboardController extends ChangeNotifier {
       _ai.process(fullUtterance, _insertAiAssistantResult);
     };
     _loadPrefs();
+    documents.load().then((_) => notifyListeners());
   }
 
   // ---- Sub-engines ----
@@ -120,6 +125,47 @@ class KeyboardController extends ChangeNotifier {
   // the capturing path, [_aiCapture.onFinalize] does that exactly once
   // per completed command.
   final AiCommandCapture _aiCapture;
+  final DocumentManager documents;
+
+  bool _documentBusy = false;
+  bool get documentBusy => _documentBusy;
+  String? _documentStatus;
+  String? get documentStatus => _documentStatus;
+
+  Future<void> refreshLinkedDocuments() async {
+    await documents.load();
+    notifyListeners();
+  }
+
+  Future<void> linkDocument({String label = 'General'}) async {
+    final linked = await documents.linkDocument(label: label);
+    _documentStatus = linked == null
+        ? 'Open Bhasha Keyboard app to link a document from Google Drive or device storage.'
+        : '${linked.displayName} linked as $label';
+    notifyListeners();
+  }
+
+  Future<void> unlinkDocument(String id) async {
+    await documents.unlink(id);
+    notifyListeners();
+  }
+
+  Future<void> handleDocumentCommand(DocumentCommand command) async {
+    await documents.load();
+    final document = documents.findByLabel(command.label);
+    if (document == null) {
+      _documentStatus = 'No linked ${command.label} document. Link it from Tools → Documents.';
+      notifyListeners();
+      return;
+    }
+    _documentBusy = true;
+    _documentStatus = 'Unlocking ${document.displayName}…';
+    notifyListeners();
+    final outcome = await documents.upload(document);
+    _documentBusy = false;
+    _documentStatus = outcome.message;
+    notifyListeners();
+  }
 
   /// True the instant a command's inactivity/mic-stop finalize fires
   /// and the AI Router request is in flight; cleared the moment
@@ -1431,6 +1477,12 @@ class KeyboardController extends ChangeNotifier {
     // Committed text is never erased: append finalized speech.
     if (rawText.trim().isEmpty) return;
     final text = rawText.trim();
+
+    final documentCommand = DocumentCommand.parse(text);
+    if (documentCommand != null) {
+      handleDocumentCommand(documentCommand);
+      return;
+    }
 
     // AI Web Assistant middleware (optional, opt-in - see the field docs
     // on [_ai]/[_aiCapture] above). Only ever consulted for
