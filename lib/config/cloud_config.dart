@@ -11,9 +11,13 @@ class CloudConfig {
     'APPWRITE_PROJECT_ID',
     defaultValue: '6a7fc74a001f50afe9e5',
   );
-  static const databaseId = String.fromEnvironment('APPWRITE_DATABASE_ID');
+  static const databaseId = String.fromEnvironment(
+    'APPWRITE_DATABASE_ID',
+    defaultValue: 'bhasha-db',
+  );
   static const documentLinksCollectionId = String.fromEnvironment(
     'APPWRITE_DOCUMENT_LINKS_COLLECTION_ID',
+    defaultValue: 'document-links',
   );
   static const oauthSuccessUrl = String.fromEnvironment(
     'APPWRITE_OAUTH_SUCCESS_URL',
