@@ -1454,10 +1454,12 @@ class KeyboardController extends ChangeNotifier {
   void _feedback() {
     if (_hapticsEnabled) {
       try {
-        _systemChannel.invokeMethod<void>('haptic', <String, dynamic>{
-          'durationMs': 12,
-          'amplitude': 70,
-        });
+        unawaited(
+          _systemChannel.invokeMethod<void>('haptic', <String, dynamic>{
+            'durationMs': 12,
+            'amplitude': 70,
+          }).catchError((_) {}),
+        );
         HapticFeedback.selectionClick();
         HapticFeedback.lightImpact();
       } catch (_) {}
