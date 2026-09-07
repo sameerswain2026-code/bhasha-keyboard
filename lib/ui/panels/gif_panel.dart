@@ -41,18 +41,19 @@ class _GifPanelState extends State<GifPanel> {
 
   void _insertGif(BuildContext context, GifItem gif) {
     final kb = context.read<KeyboardController>();
-    // Rich-content path unavailable in web preview / plain editors:
-    // explicit, labelled fallback instead of blind URL paste.
-    kb.insertContent('[GIF: ${gif.title}] ${gif.shareUrl}');
+    final share = kb.hostMediaSharer;
+    if (share != null) {
+      share(gif.shareUrl, 'image/gif', gif.title);
+    } else {
+      // Web/demo fallback when no Android share bridge is available.
+      kb.insertContent('[GIF: ${gif.title}] ${gif.shareUrl}');
+    }
     kb.closePanel();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'GIF shared as link (editor does not accept rich GIF content)',
-        ),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    if (share == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('GIF link inserted in preview editor')),
+      );
+    }
   }
 
   @override

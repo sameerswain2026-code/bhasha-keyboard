@@ -28,10 +28,12 @@ class _StickerPanelState extends State<StickerPanel> {
   int _categoryIndex = 0; // 0 = recents, 1..n = categories
 
   void _send(KeyboardController kb, StickerEntry sticker) {
-    // Rich sticker images aren't insertable as real text content (same
-    // constraint as GIFs - see gif_panel.dart) - send a clearly-labelled
-    // fallback so the recipient still understands what was "sent".
-    kb.insertContent('[Sticker: ${sticker.label}]');
+    final share = kb.hostMediaSharer;
+    if (share != null) {
+      share(sticker.asset, 'image/png', sticker.label);
+    } else {
+      kb.insertContent('[Sticker: ${sticker.label}]');
+    }
     kb.addRecentSticker(sticker.id);
     kb.closePanel();
   }

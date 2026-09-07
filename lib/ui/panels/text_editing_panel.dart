@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/keyboard_controller.dart';
 import '../../data/languages.dart';
+import '../../engine/writing_assistant.dart';
 import '../kb_theme.dart';
 import 'panel_mini_keyboard.dart';
 
@@ -48,6 +49,14 @@ class TextEditingPanel extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _writingAction(
+    KeyboardController kb,
+    Future<void> Function() action,
+  ) async {
+    await kb.snapshotHostSelection();
+    await action();
   }
 
   @override
@@ -135,6 +144,29 @@ class TextEditingPanel extends StatelessWidget {
                     Icons.volume_up_outlined,
                     'Read selection',
                     kb.readSelectedTextAloud,
+                  ),
+                  action(
+                    Icons.spellcheck,
+                    'Fix grammar',
+                    () => _writingAction(kb, kb.fixGrammar),
+                  ),
+                  action(
+                    Icons.auto_awesome,
+                    'Rewrite',
+                    () => _writingAction(kb, kb.rewriteText),
+                  ),
+                  action(
+                    Icons.business_center_outlined,
+                    'Formal tone',
+                    () => _writingAction(
+                      kb,
+                      () => kb.rewriteText(tone: WritingTone.formal),
+                    ),
+                  ),
+                  action(
+                    Icons.reply_outlined,
+                    'Suggest reply',
+                    () => _writingAction(kb, kb.suggestReply),
                   ),
                 ],
               ),

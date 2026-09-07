@@ -21,6 +21,7 @@ class ImeBridge {
     kb.hostSelectedTextReader = getHostSelectedText;
     kb.hostSelectionReplacer = replaceHostSelectedText;
     kb.hostTextSpeaker = speakText;
+    kb.hostMediaSharer = shareMedia;
   }
 
   static const MethodChannel _channel = MethodChannel('bhasha/ime');
@@ -261,6 +262,16 @@ class ImeBridge {
   Future<void> stopSpeaking() async {
     try {
       await _channel.invokeMethod('stopSpeaking');
+    } catch (_) {}
+  }
+
+  Future<void> shareMedia(String source, String mimeType, String title) async {
+    try {
+      await _channel.invokeMethod('shareMedia', {
+        'source': source,
+        'mimeType': mimeType,
+        'title': title,
+      });
     } catch (_) {}
   }
 

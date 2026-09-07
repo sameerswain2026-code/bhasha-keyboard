@@ -17,6 +17,7 @@ import '../engine/suggestion_engine.dart';
 import '../engine/transliterator.dart';
 import '../engine/translation_engine.dart';
 import '../engine/voice_engine.dart';
+import '../engine/writing_assistant.dart';
 
 /// Keyboard layout page.
 enum KeyboardLayer { alpha, numeric, symbols }
@@ -95,6 +96,7 @@ class KeyboardController extends ChangeNotifier {
   // ---- Sub-engines ----
   final VoiceEngine voice;
   final SuggestionEngine suggestions = SuggestionEngine();
+  final WritingAssistant writingAssistant = const WritingAssistant();
 
   // =====================================================================
   // AI Web Assistant (optional, opt-in - default OFF)
@@ -264,6 +266,8 @@ class KeyboardController extends ChangeNotifier {
   Future<String?> Function()? hostSelectedTextReader;
   Future<void> Function(String text)? hostSelectionReplacer;
   Future<void> Function(String text, String locale)? hostTextSpeaker;
+  Future<void> Function(String source, String mimeType, String title)?
+  hostMediaSharer;
 
   // ---- Mic mode (Transcribe / Translate / Auto-mix) ----
   // Exactly 3 modes. Default on first open is Transcribe (Odia, Roman).
@@ -1278,6 +1282,8 @@ class KeyboardController extends ChangeNotifier {
     } else if (!pack.supportsRoman) {
       _scriptMode = ScriptMode.native;
     }
+    voice.setScriptMode(_scriptMode);
+    voice.setTranslateTarget(_translateTarget);
     _persist('language', pack.id);
     _persist('scriptMode', _scriptMode.name);
     _updateSuggestions();
@@ -1605,6 +1611,27 @@ class KeyboardController extends ChangeNotifier {
     return _pendingHostSelection;
   }
 
+  Future<void> _applyWritingTransform(String Function(String) transform) async {
+    final reader = hostSelectedTextReader;
+    final replacer = hostSelectionReplacer;
+    if (reader == null || replacer == null) return;
+    final text = _pendingHostSelection ?? await reader();
+    _pendingHostSelection = null;
+    if (text == null || text.trim().isEmpty) return;
+    await replacer(transform(text));
+  }
+
+  Future<void> fixGrammar() =>
+      _applyWritingTransform(writingAssistant.fixGrammar);
+
+  Future<void> rewriteText({WritingTone tone = WritingTone.clear}) =>
+      _applyWritingTransform(
+        (text) => writingAssistant.rewrite(text, tone: tone),
+      );
+
+  Future<void> suggestReply() =>
+      _applyWritingTransform(writingAssistant.suggestReply);
+
   Future<void> readSelectedTextAloud() async {
     final text = await hostSelectedTextReader?.call();
     if (text != null && text.trim().isNotEmpty) {
@@ -1629,22 +1656,18 @@ class KeyboardController extends ChangeNotifier {
     final text = _pendingHostSelection ?? await reader();
     _pendingHostSelection = null;
     if (text == null || text.trim().isEmpty) return;
-    String? english;
-    for (final source in kLanguagePacks) {
-      if (source.id == 'en') continue;
-      final candidate = await _translationEngine.translate(
-        text,
-        source,
-        LanguageRegistry.byId('en'),
-      );
-      if (candidate != null &&
-          candidate.trim().isNotEmpty &&
-          candidate != text) {
-        english = candidate;
-        break;
-      }
-    }
-    english ??= text;
+    // Detect the source script automatically; the user only chooses the
+    // destination language. This avoids the old trial-through-every-language
+    // behavior, which was slow and often selected the wrong source.
+    final source = TranslationLanguageDetector.detect(text);
+    final english = source.id == 'en'
+        ? text
+        : await _translationEngine.translate(
+                text,
+                source,
+                LanguageRegistry.byId('en'),
+              ) ??
+              text;
     final translated = target.id == 'en'
         ? english
         : await _translationEngine.translate(
