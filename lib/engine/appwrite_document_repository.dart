@@ -11,12 +11,10 @@ import 'document_manager.dart';
 
 class AppwriteDocumentRepository {
   AppwriteDocumentRepository({Client? client})
-      : _client = client ??
-            (Client()
-              ..setEndpoint(CloudConfig.endpoint)
-              ..setProject(CloudConfig.projectId)),
-        _account = Account(client ?? _newClient()),
-        _databases = Databases(client ?? _newClient());
+      : _client = client ?? _newClient() {
+    _account = Account(_client);
+    _databases = Databases(_client);
+  }
 
   static Client _newClient() => Client()
     ..setEndpoint(CloudConfig.endpoint)
@@ -60,6 +58,11 @@ class AppwriteDocumentRepository {
       databaseId: CloudConfig.databaseId,
       collectionId: CloudConfig.documentLinksCollectionId,
       documentId: ID.unique(),
+      permissions: [
+        Permission.read(Role.user(user.$id)),
+        Permission.update(Role.user(user.$id)),
+        Permission.delete(Role.user(user.$id)),
+      ],
       data: {
         'userId': user.$id,
         'driveFileId': driveFileId,
