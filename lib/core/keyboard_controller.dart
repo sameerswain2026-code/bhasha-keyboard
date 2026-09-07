@@ -1324,6 +1324,21 @@ class KeyboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Android keeps the IME engine alive while the user switches apps. Reset
+  /// transient keyboard state for the newly focused field so Settings, emoji,
+  /// symbol pages, and active voice never leak into another app.
+  void resetTransientStateForNewInput() {
+    if (voice.isActive) voice.cancelForKeyPress();
+    _aiCapture.cancel();
+    _aiThinking = false;
+    _panel = ActivePanel.none;
+    _panelKeyboardActive = false;
+    _panelInputText = '';
+    _layer = KeyboardLayer.alpha;
+    _shift = ShiftState.off;
+    notifyListeners();
+  }
+
   // =====================================================================
   // Theme & feedback settings
   // =====================================================================

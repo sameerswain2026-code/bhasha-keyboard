@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'kb_theme.dart';
 
@@ -63,10 +64,17 @@ class _KeyWidgetState extends State<KeyWidget> {
     return Expanded(
       flex: widget.flex,
       child: Padding(
-        padding: const EdgeInsets.all(2.5),
+        // Tighter gutters make each key body and hit target larger without
+        // changing the fixed keyboard width.
+        padding: const EdgeInsets.all(1.5),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => setState(() => _pressed = true),
+          onTapDown: (_) {
+            // Give fast typing immediate tactile confirmation, before the
+            // text insertion callback returns.
+            HapticFeedback.lightImpact();
+            setState(() => _pressed = true);
+          },
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () {
             setState(() => _pressed = false);
@@ -95,19 +103,19 @@ class _KeyWidgetState extends State<KeyWidget> {
                 },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 60),
-            // Base height raised from 46 -> 54: the standalone language
+            // Base height raised from 46 -> 55: the standalone language
             // sub-bar row beneath the toolbar was removed (spec item 2),
             // and that reclaimed vertical space is redistributed into
             // the keys themselves rather than left empty, while the
             // overall keyboard container height budget stays identical
             // (see `_kBodyHeight`/`_kFullBodyHeight` in keyboard_view.dart).
             //
-            // Budget check (4 key rows, each wrapped in EdgeInsets.all(2.5)
+            // Budget check (4 key rows, each wrapped in EdgeInsets.all(1.5)
             // padding, inside an outer Padding.fromLTRB(2,2,2,4)):
-            //   4 * (54 + 5) + 6 = 242, which fits within the 246dp
+            //   4 * (55 + 3) + 6 = 238, which fits within the 246dp
             //   `_kBodyHeight` budget with a few dp of margin to spare.
             //   (56 was tried first and overflowed by ~4dp - see history.)
-            height: 54 * widget.heightScale,
+            height: 55 * widget.heightScale,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(8),

@@ -37,6 +37,10 @@ class ImeBridge {
       case 'startInput':
         final args = (call.arguments as Map?) ?? {};
         final action = args['action'] as String? ?? 'newline';
+        // Android keeps one IME FlutterEngine alive across apps. Clear any
+        // open settings/panel/symbol page and stop voice before the new host
+        // field is shown, so WhatsApp -> Telegram never resumes in Settings.
+        kb.resetTransientStateForNewInput();
         kb.setEditorAction(
           EditorAction.values.firstWhere(
             (a) => a.name == action,
@@ -51,6 +55,7 @@ class ImeBridge {
         // user types at least one new character first.
         await _resyncEditorFromHost();
       case 'finishInput':
+        kb.resetTransientStateForNewInput();
         _resetEditor();
       case 'externalTextChanged':
         // The host's text changed by a means we did NOT initiate -

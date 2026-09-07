@@ -85,6 +85,18 @@ void main() {
       kb.dispose();
     });
 
+    test('new input resets panels, layer, and shift to keyboard defaults', () {
+      final kb = KeyboardController();
+      kb.setLayer(KeyboardLayer.symbols);
+      kb.togglePanel(ActivePanel.settings);
+      kb.tapShift();
+      kb.resetTransientStateForNewInput();
+      expect(kb.layer, KeyboardLayer.alpha);
+      expect(kb.panel, ActivePanel.none);
+      expect(kb.shift, ShiftState.off);
+      kb.dispose();
+    });
+
     test('numeric layout data contains digits and rupee', () {
       expect(kNumeric.rows[0], containsAll(['1', '5', '0']));
       expect(kNumeric.rows[1], contains('₹'));
