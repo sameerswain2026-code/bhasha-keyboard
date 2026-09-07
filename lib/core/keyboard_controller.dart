@@ -95,10 +95,13 @@ class KeyboardController extends ChangeNotifier {
       _ai.process(fullUtterance, _insertAiAssistantResult);
     };
     _loadPrefs();
-    documents.load().then((_) => notifyListeners());
+    documents.load().then((_) {
+      if (!_disposed) notifyListeners();
+    });
   }
 
   // ---- Sub-engines ----
+  bool _disposed = false;
   final VoiceEngine voice;
   final SuggestionEngine suggestions = SuggestionEngine();
   final WritingAssistant writingAssistant = WritingAssistant();
@@ -898,7 +901,7 @@ class KeyboardController extends ChangeNotifier {
           }
         }
       }
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     } catch (_) {
       // Persistence failure must never break typing.
     }
@@ -2041,6 +2044,7 @@ class KeyboardController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _deleteTimer?.cancel();
     _justCopiedTimer?.cancel();
     voice.removeListener(notifyListeners);
