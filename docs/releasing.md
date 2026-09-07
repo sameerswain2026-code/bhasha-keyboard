@@ -2,7 +2,7 @@
 
 ## One-time GitHub setup
 
-Create an Android upload keystore and store the base64-encoded keystore in the `ANDROID_KEYSTORE_BASE64` Actions secret. Store the complete `key.properties` contents in `ANDROID_KEY_PROPERTIES`, and the keystore password in `ANDROID_KEYSTORE_PASSWORD`. Add provider values as `GEMINI_API_KEYS`, `SARVAM_API_KEYS`, and `TAVILY_API_KEYS` only if the release is intentionally configured to use them.
+Create an Android upload keystore and store the base64-encoded keystore in the `ANDROID_KEYSTORE_BASE64` Actions secret. Store the complete `key.properties` contents in `ANDROID_KEY_PROPERTIES`; the password must remain inside that secret and must not be duplicated in a separate repository variable. Add provider values as `GEMINI_API_KEYS`, `SARVAM_API_KEYS`, and `TAVILY_API_KEYS` only if the release is intentionally configured to use them.
 
 ## Versioning
 
@@ -13,7 +13,17 @@ git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
 
-The tag workflow validates the project, builds a signed `app-release.aab`, and attaches it to a GitHub Release. A failed signing or quality check blocks publication.
+The tag workflow validates the project, builds a signed `app-release.aab`, uploads it as a workflow artifact, and attaches it to a GitHub Release. A failed signing or quality check blocks publication. The workflow restores the keystore at `android/app/upload-keystore.jks`, matching the Gradle signing configuration.
+
+## Play Store release gate
+
+Before uploading the AAB to Google Play, complete the following checks:
+
+1. Deploy and test the Appwrite Functions required by `docs/production-setup.md` if cloud Documents/Google Drive is enabled.
+2. Test the IME on at least one Android 13-or-newer device and one older supported device, including WhatsApp, Telegram, a browser field, gesture navigation, and three-button navigation where available.
+3. Verify microphone permission, Native/Roman output, all selectable language layouts, manual translation, document unlinking, URI permission revocation, OAuth cancellation, and lockout expiry.
+4. Publish a public privacy-policy URL that matches the Play Console Data safety declaration and names every network provider used by voice, translation, AI, search, or Documents.
+5. Upload the signed AAB from the tag workflow to an internal Play testing track before production rollout.
 
 ## Rollback
 

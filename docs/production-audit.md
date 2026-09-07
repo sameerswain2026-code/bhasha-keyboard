@@ -57,11 +57,11 @@ The Play Store release process also needs final store assets, application screen
 
 ## Commit
 
-The implemented changes are in commits `d2739b1` and `bfbb15f`, pushed to the connected repository's `main` branch.
+The implemented changes are in the production-hardening and feature-integration commits pushed to the connected repository's `main` branch. The current release-workflow correction is tracked in the latest follow-up commit.
 
 ## Recommended next phase
 
-The next engineering phase should add Android instrumentation tests around the IME service and host selection synchronization, run a physical-device compatibility matrix, complete the privacy policy and provider architecture, add release artifact validation for the signed AAB, and perform a dedicated visual pass across small phones, tablets, dark mode, large font settings, RTL Urdu/Kashmiri/Sindhi, and low-memory devices.
+The next engineering phase should add Android instrumentation tests around the IME service and host selection synchronization, run a physical-device compatibility matrix, complete the privacy policy and provider architecture, and perform a dedicated visual pass across small phones, tablets, dark mode, large font settings, RTL Urdu/Kashmiri/Sindhi, and low-memory devices. Signed AAB validation and tag-release artifact upload are now covered by the release workflow.
 
 ## References
 
