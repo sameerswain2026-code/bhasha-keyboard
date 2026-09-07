@@ -34,4 +34,12 @@ The production document flow requires authenticated Functions for Google OAuth e
 
 ## Current repository status
 
-The client boundary and Appwrite Auth/metadata adapter are present in `CloudConfig` and `AppwriteDocumentRepository`. Console resources and Function deployment remain external provisioning steps because the Appwrite dashboard session did not expose project controls during setup. No credentials are committed in this repository.
+The client boundary and Appwrite Auth/metadata adapter are present in `CloudConfig` and `AppwriteDocumentRepository`. The Android client uses the system document picker with persisted read-only URI permissions, sends supported attachments through `commitContent`, and falls back to the target application's picker or share sheet. Device-credential authentication is required before attachment, and three failed attempts create a local 15-minute lockout. Unlinking releases the local URI and deletes the corresponding Appwrite metadata row when one exists.
+
+Keyboard key feedback is routed through the native `InputMethodService` vibrator as well as Flutter's standard feedback API. This is required because the keyboard runs in another application's IME window, where activity-only feedback behavior is inconsistent across Android vendors.
+
+Console resources and Function deployment remain external provisioning steps because the Appwrite dashboard session did not expose project controls during setup. The Google Drive exchange, token refresh, revoke, folder mapping, password verification, and atomic server-side lockout functions must be deployed before Google Drive linking can be considered production-complete. No credentials are committed in this repository.
+
+## Release gate
+
+The application must not be published as a production Google Drive client until the Functions are deployed and tested with a real non-owner test account. The release candidate must also be verified on at least one Android 13 or newer device and one older supported Android device, including haptics in WhatsApp, Telegram, and a browser text field; document attachment in an editor that supports `commitContent`; fallback sharing in an editor that does not; OAuth cancellation; unlink and permission revocation; three failed authentication attempts; and lockout expiry. The sandbox currently lacks the Flutter SDK, so the final signed build and automated Flutter tests must be run in GitHub Actions or a machine with Flutter installed.

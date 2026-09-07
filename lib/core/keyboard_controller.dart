@@ -66,6 +66,7 @@ const LanguagePack _autoMixLanguagePack = LanguagePack(
 );
 
 class KeyboardController extends ChangeNotifier {
+  static const MethodChannel _systemChannel = MethodChannel('bhasha/system');
   KeyboardController({
     VoiceEngine? voiceEngine,
     AiAssistantEngine? aiEngine,
@@ -1453,6 +1454,10 @@ class KeyboardController extends ChangeNotifier {
   void _feedback() {
     if (_hapticsEnabled) {
       try {
+        _systemChannel.invokeMethod<void>('haptic', <String, dynamic>{
+          'durationMs': 12,
+          'amplitude': 70,
+        });
         HapticFeedback.selectionClick();
         HapticFeedback.lightImpact();
       } catch (_) {}

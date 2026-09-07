@@ -5,8 +5,11 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.provider.OpenableColumns
 import android.view.inputmethod.InputMethodManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -35,6 +38,7 @@ class MainActivity : FlutterActivity() {
                     "requestMicPermission" -> { if (!hasMic()) ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 7001); result.success(hasMic()) }
                     "startMic" -> { if (hasMic()) { micStream?.startRecording(); result.success(true) } else result.success(false) }
                     "stopMic" -> { micStream?.stopRecording(); result.success(true) }
+                    "haptic" -> result.success(vibrate(call.argument<Int>("durationMs"), call.argument<Int>("amplitude")))
                     else -> result.notImplemented()
                 }
             }
@@ -45,8 +49,9 @@ class MainActivity : FlutterActivity() {
                         pendingDocumentResult = result
                         startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/pdf"
-                            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"))
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                            type = "*/*"
+                            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "image/*"))
                         }, documentRequestCode)
                     }
                     "authenticateDocument" -> authenticateDocument(result)
@@ -87,13 +92,33 @@ class MainActivity : FlutterActivity() {
             val uri = data?.data
             if (resultCode != RESULT_OK || uri == null) { result.success(null); return }
             try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) {}
-            result.success(mapOf("uri" to uri.toString(), "displayName" to (uri.lastPathSegment ?: "Document"), "mimeType" to (contentResolver.getType(uri) ?: "application/octet-stream")))
+            result.success(mapOf("uri" to uri.toString(), "displayName" to displayName(uri), "mimeType" to (contentResolver.getType(uri) ?: "application/octet-stream")))
         }
     }
 
     private fun isImeEnabled(): Boolean = (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).enabledInputMethodList.any { it.packageName == packageName }
     private fun isImeSelected(): Boolean = (Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) ?: "").startsWith(packageName)
     private fun hasMic(): Boolean = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    private fun vibrate(durationValue: Int?, amplitudeValue: Int?): Boolean {
+        val duration = (durationValue ?: 12).coerceIn(1, 50).toLong()
+        val amplitude = (amplitudeValue ?: 70).coerceIn(1, 255)
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return false
+        if (!vibrator.hasVibrator()) return false
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+        } else {
+            @Suppress("DEPRECATION") vibrator.vibrate(duration)
+        }
+        return true
+    }
+
+    private fun displayName(uri: Uri): String {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) return cursor.getString(0) ?: "Document"
+        }
+        return uri.lastPathSegment ?: "Document"
+    }
 
     override fun onDestroy() { micStream?.stopRecording(); super.onDestroy() }
 }

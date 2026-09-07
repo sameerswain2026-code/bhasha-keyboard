@@ -30,6 +30,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".DocumentAuthActivity"
+            android:exported="false"
+            android:theme="@style/LaunchTheme" />
+
         <!-- System-wide keyboard (IME) service: makes Bhasha Keyboard
              selectable in Android Settings > Languages & input and usable
              inside WhatsApp, Telegram and every other app. -->
