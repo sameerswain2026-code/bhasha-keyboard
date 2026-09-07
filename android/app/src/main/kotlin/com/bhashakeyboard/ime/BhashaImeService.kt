@@ -481,16 +481,6 @@ class BhashaImeService : InputMethodService() {
         super.onFinishInputView(finishingInput)
     }
 
-    override fun onDestroy() {
-        documentAuthReceiver?.let { runCatching { unregisterReceiver(it) } }
-        documentAuthReceiver = null
-        pendingDocumentAuth?.error("SERVICE_STOPPED", "Keyboard service stopped", null)
-        pendingDocumentAuth = null
-        micStream?.stopRecording()
-        textToSpeech?.shutdown()
-        super.onDestroy()
-    }
-
     override fun onEvaluateFullscreenMode(): Boolean = false
 
     /// Fires on EVERY cursor/selection/text change in the host field,
@@ -586,8 +576,9 @@ class BhashaImeService : InputMethodService() {
             PackageManager.PERMISSION_GRANTED
 
     override fun onDestroy() {
-        documentAuthReceiver?.let { unregisterReceiver(it) }
-        pendingDocumentAuth?.success(false)
+        documentAuthReceiver?.let { runCatching { unregisterReceiver(it) } }
+        documentAuthReceiver = null
+        pendingDocumentAuth?.error("SERVICE_STOPPED", "Keyboard service stopped", null)
         pendingDocumentAuth = null
         clipListener?.let { clipboardManager?.removePrimaryClipChangedListener(it) }
         micStream?.stopRecording()
