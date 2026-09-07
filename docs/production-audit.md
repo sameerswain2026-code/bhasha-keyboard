@@ -50,7 +50,7 @@ The Play Store release process also needs final store assets, application screen
 
 ## Commit
 
-The implemented changes are in commit `d2739b1`, pushed to the connected repository's `main` branch.
+The implemented changes are in commits `d2739b1` and `bfbb15f`, pushed to the connected repository's `main` branch.
 
 ## Recommended next phase
 
