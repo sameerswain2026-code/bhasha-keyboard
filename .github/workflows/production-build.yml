@@ -48,7 +48,7 @@ jobs:
           test -s android/key.properties
 
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart format .
       - run: flutter analyze
       - run: flutter test
 
