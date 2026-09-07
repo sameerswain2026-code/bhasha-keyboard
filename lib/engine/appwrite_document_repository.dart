@@ -35,14 +35,16 @@ class AppwriteDocumentRepository {
   }
 
   Future<void> signInWithGoogle() async {
-    if (CloudConfig.oauthSuccessUrl.isEmpty ||
-        CloudConfig.oauthFailureUrl.isEmpty) {
-      throw StateError('Appwrite OAuth redirect URLs are not configured');
-    }
+    final success = CloudConfig.oauthSuccessUrl.trim();
+    final failure = CloudConfig.oauthFailureUrl.trim();
+    // Appwrite's Flutter mobile flow returns through the SDK deep-link
+    // handler. Explicit success/failure URLs are web-only; passing empty
+    // strings causes the provider to reject the request as a missing URL.
     await _account.createOAuth2Session(
       provider: enums.OAuthProvider.google,
-      success: CloudConfig.oauthSuccessUrl,
-      failure: CloudConfig.oauthFailureUrl,
+      success: success.isEmpty ? null : success,
+      failure: failure.isEmpty ? null : failure,
+      scopes: const ['https://www.googleapis.com/auth/drive.file'],
     );
   }
 

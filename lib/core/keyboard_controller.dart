@@ -480,6 +480,14 @@ class KeyboardController extends ChangeNotifier {
     _persist('translateTarget', _translateTarget.id);
     _persist('translateStyle', _translateOutputStyle.name);
     _persist('translateEverActivated', true);
+    // Translation output is also the user's next typing context. This keeps
+    // the live keycaps aligned with the selected target: English -> Odia,
+    // Telugu -> Odia, and Odia -> Telugu all show the target script rather
+    // than falling back to generic A-B-C keycaps.
+    setLanguage(_translateTarget);
+    setScriptMode(
+      _translateTarget.isLatin ? ScriptMode.roman : ScriptMode.native,
+    );
     setMicMode(MicMode.translate);
     closePanel();
   }

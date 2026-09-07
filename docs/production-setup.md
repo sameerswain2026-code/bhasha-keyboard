@@ -13,6 +13,8 @@ APPWRITE_OAUTH_SUCCESS_URL
 APPWRITE_OAUTH_FAILURE_URL
 ```
 
+For the Android Flutter build, `APPWRITE_OAUTH_SUCCESS_URL` and `APPWRITE_OAUTH_FAILURE_URL` may remain empty. The mobile Appwrite SDK uses its callback/deep-link flow when these optional web redirect values are omitted. Supplying an empty string is incorrect because Google treats it as a missing redirect URL. For a web build, set both values to real HTTPS routes owned by the application and add the exact Appwrite-provided callback URL to the Google Cloud OAuth client configuration.
+
 ## Server-side Function variables
 
 These belong only in Appwrite Function environment variables or another secure server runtime:
@@ -35,6 +37,8 @@ The production document flow requires authenticated Functions for Google OAuth e
 ## Current repository status
 
 The client boundary and Appwrite Auth/metadata adapter are present in `CloudConfig` and `AppwriteDocumentRepository`. The Android client uses the system document picker with persisted read-only URI permissions, sends supported attachments through `commitContent`, and falls back to the target application's picker or share sheet. Device-credential authentication is required before attachment, and three failed attempts create a local 15-minute lockout. Unlinking releases the local URI and deletes the corresponding Appwrite metadata row when one exists.
+
+Google sign-in requests the least-privilege `drive.file` scope. This permits access to files selected or created through the app without requesting broad access to the user's entire Drive.
 
 Keyboard key feedback is routed through the native `InputMethodService` vibrator as well as Flutter's standard feedback API. This is required because the keyboard runs in another application's IME window, where activity-only feedback behavior is inconsistent across Android vendors.
 
