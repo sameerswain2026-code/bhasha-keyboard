@@ -99,6 +99,12 @@ class FakeGeminiService implements GeminiService {
   }
 
   @override
+  Future<String> generateWriting(String prompt) async {
+    if (shouldThrow) throw Exception('simulated Gemini failure');
+    return directAnswer.isEmpty ? prompt : directAnswer;
+  }
+
+  @override
   void dispose() {}
 }
 

@@ -5,6 +5,8 @@
 library;
 
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/enums.dart' as enums;
+import 'package:appwrite/models.dart' as models;
 
 import '../config/cloud_config.dart';
 import 'document_manager.dart';
@@ -24,7 +26,7 @@ class AppwriteDocumentRepository {
   late final Account _account;
   late final Databases _databases;
 
-  Future<User?> currentUser() async {
+  Future<models.User?> currentUser() async {
     try {
       return await _account.get();
     } on AppwriteException {
@@ -38,13 +40,13 @@ class AppwriteDocumentRepository {
       throw StateError('Appwrite OAuth redirect URLs are not configured');
     }
     await _account.createOAuth2Session(
-      provider: OAuthProvider.google,
-      success: Uri.parse(CloudConfig.oauthSuccessUrl),
-      failure: Uri.parse(CloudConfig.oauthFailureUrl),
+      provider: enums.OAuthProvider.google,
+      success: CloudConfig.oauthSuccessUrl,
+      failure: CloudConfig.oauthFailureUrl,
     );
   }
 
-  Future<Document?> saveReference({
+  Future<models.Document?> saveReference({
     required LinkedDocument document,
     required String driveFileId,
     String? driveFolderId,

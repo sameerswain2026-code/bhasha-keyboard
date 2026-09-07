@@ -8,8 +8,6 @@
 /// WhatsApp/Telegram/any app always matches what the engine produced.
 library;
 
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 
 import '../core/keyboard_controller.dart';
