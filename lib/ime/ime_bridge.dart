@@ -237,8 +237,12 @@ class ImeBridge {
     try {
       final text = await _channel.invokeMethod<String>('getSelectedText');
       if (text != null && text.trim().isNotEmpty) return text;
-      final clipboard = await _channel.invokeMethod<String>('getClipboardText');
-      return clipboard?.trim().isEmpty == true ? null : clipboard;
+      // Do not fall back to clipboard contents here. Writing tools such as
+      // Grammar Fix and Rewrite operate on the host selection; using the
+      // clipboard as an implicit selection can unexpectedly replace unrelated
+      // text in the focused app. Clipboard paste remains an explicit action in
+      // the text-editing panel.
+      return null;
     } catch (_) {
       return null;
     }

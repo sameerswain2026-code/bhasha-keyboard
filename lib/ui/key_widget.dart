@@ -2,7 +2,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'kb_theme.dart';
 
@@ -64,17 +63,10 @@ class _KeyWidgetState extends State<KeyWidget> {
     return Expanded(
       flex: widget.flex,
       child: Padding(
-        // Tighter gutters make each key body and hit target larger without
-        // changing the fixed keyboard width.
         padding: const EdgeInsets.all(1.5),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (_) {
-            // Give fast typing immediate tactile confirmation, before the
-            // text insertion callback returns.
-            HapticFeedback.lightImpact();
-            setState(() => _pressed = true);
-          },
+          onTapDown: (_) => setState(() => _pressed = true),
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () {
             setState(() => _pressed = false);
@@ -92,58 +84,51 @@ class _KeyWidgetState extends State<KeyWidget> {
               : (_) => widget.onHorizontalDragEnd!.call(),
           onLongPressStart: widget.onLongPressStart == null
               ? null
-              : (_) {
-                  widget.onLongPressStart!.call();
-                },
+              : (_) => widget.onLongPressStart!.call(),
           onLongPressEnd: widget.onLongPressEnd == null
               ? null
               : (_) {
                   setState(() => _pressed = false);
                   widget.onLongPressEnd!.call();
                 },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 60),
-            // Base height raised from 46 -> 55: the standalone language
-            // sub-bar row beneath the toolbar was removed (spec item 2),
-            // and that reclaimed vertical space is redistributed into
-            // the keys themselves rather than left empty, while the
-            // overall keyboard container height budget stays identical
-            // (see `_kBodyHeight`/`_kFullBodyHeight` in keyboard_view.dart).
-            //
-            // Budget check (4 key rows, each wrapped in EdgeInsets.all(1.5)
-            // padding, inside an outer Padding.fromLTRB(2,2,2,4)):
-            //   4 * (55 + 3) + 6 = 238, which fits within the 246dp
-            //   `_kBodyHeight` budget with a few dp of margin to spare.
-            //   (56 was tried first and overflowed by ~4dp - see history.)
-            height: 55 * widget.heightScale,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: _pressed
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 1,
-                        offset: const Offset(0, 1),
+          child: Semantics(
+            button: true,
+            label: widget.label ?? 'Keyboard key',
+            liveRegion: false,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 60),
+              // Four rows at 55dp plus gutters fit the fixed 246dp key-area
+              // budget while preserving a comfortable touch target.
+              height: 55 * widget.heightScale,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: _pressed
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 1,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+              ),
+              alignment: Alignment.center,
+              child: widget.icon != null
+                  ? Icon(
+                      widget.icon,
+                      size: 22,
+                      color: widget.active ? t.accentText : t.icon,
+                    )
+                  : Text(
+                      widget.label ?? '',
+                      style: TextStyle(
+                        fontSize: widget.fontSize,
+                        fontWeight: FontWeight.w500,
+                        color: fg,
                       ),
-                    ],
-            ),
-            alignment: Alignment.center,
-            child: widget.icon != null
-                ? Icon(
-                    widget.icon,
-                    size: 22,
-                    color: widget.active ? t.accentText : t.icon,
-                  )
-                : Text(
-                    widget.label ?? '',
-                    style: TextStyle(
-                      fontSize: widget.fontSize,
-                      fontWeight: FontWeight.w500,
-                      color: fg,
                     ),
-                  ),
+            ),
           ),
         ),
       ),

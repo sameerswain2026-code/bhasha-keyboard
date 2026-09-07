@@ -21,12 +21,12 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -52,11 +52,10 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Never ship a release artifact signed with the debug keystore.
+            // The task guard below produces an actionable CI/local error when
+            // the upload keystore has not been configured.
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
         }
@@ -66,10 +65,10 @@ android {
 // Debug builds remain usable for local development; release builds must have
 // an explicit upload keystore and are blocked otherwise.
 tasks.configureEach {
-    if (name == "assembleRelease") {
+    if (name == "assembleRelease" || name == "bundleRelease") {
         doFirst {
             check(keystorePropertiesFile.exists()) {
-                "Release signing is not configured. Create android/key.properties locally or provide CI signing secrets."
+                "Release signing is not configured. Create android/key.properties locally or provide CI signing secrets before building a release artifact."
             }
         }
     }
