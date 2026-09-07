@@ -227,6 +227,38 @@ class DocumentManager {
     await _save();
   }
 
+  Future<void> moveToGroup(String id, String group) async {
+    await load();
+    final trimmed = group.trim();
+    if (trimmed.isEmpty) return;
+    _documents = _documents
+        .map((doc) => doc.id == id
+            ? LinkedDocument(
+                id: doc.id,
+                label: doc.label,
+                groupName: trimmed,
+                driveFileId: doc.driveFileId,
+                driveFolderId: doc.driveFolderId,
+                remoteRowId: doc.remoteRowId,
+                displayName: doc.displayName,
+                uri: doc.uri,
+                mimeType: doc.mimeType,
+                linkedAt: doc.linkedAt,
+                lockStatus: doc.lockStatus,
+                failedAttempts: doc.failedAttempts,
+                lockedUntil: doc.lockedUntil,
+              )
+            : doc)
+        .toList(growable: false);
+    await _save();
+    final target = _documents.firstWhere((doc) => doc.id == id);
+    if (repository != null && target.remoteRowId.isNotEmpty) {
+      try {
+        await repository!.updateReference(target);
+      } catch (_) {}
+    }
+  }
+
   LinkedDocument? findByLabel(String label) {
     final normalized = label.trim().toLowerCase();
     for (final doc in _documents) {

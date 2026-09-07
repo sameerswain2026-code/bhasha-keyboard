@@ -182,6 +182,12 @@ class KeyboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> moveDocumentToGroup(String id, String group) async {
+    await documents.moveToGroup(id, group);
+    _documentStatus = 'Document moved to $group';
+    notifyListeners();
+  }
+
   Future<void> handleDocumentCommand(DocumentCommand command) async {
     await documents.load();
     final document = documents.findByLabel(command.label);

@@ -93,5 +93,19 @@ class AppwriteDocumentRepository {
     );
   }
 
+  Future<models.Row?> updateReference(LinkedDocument document) async {
+    if (!CloudConfig.databaseConfigured || document.remoteRowId.isEmpty) return null;
+    return _tables.updateRow(
+      databaseId: CloudConfig.databaseId,
+      tableId: CloudConfig.documentLinksCollectionId,
+      rowId: document.remoteRowId,
+      data: {
+        'label': document.label,
+        'groupName': document.groupName,
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
+  }
+
   Client get client => _client;
 }

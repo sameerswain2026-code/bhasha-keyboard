@@ -35,21 +35,7 @@ class DocumentsPanel extends StatelessWidget {
                 IconButton(
                   tooltip: 'Link document',
                   icon: Icon(Icons.add, color: t.accent),
-                  onPressed: () async {
-                    final label = await showMenu<String>(
-                      context: context,
-                      position: const RelativeRect.fromLTRB(120, 48, 8, 0),
-                      items: const [
-                        PopupMenuItem(value: 'Resume', child: Text('Resume')),
-                        PopupMenuItem(value: 'Education', child: Text('Education')),
-                        PopupMenuItem(value: 'Aadhaar', child: Text('Aadhaar Card')),
-                        PopupMenuItem(value: 'Passport', child: Text('Passport')),
-                        PopupMenuItem(value: 'Certificate', child: Text('Certificate')),
-                        PopupMenuItem(value: 'General', child: Text('General')),
-                      ],
-                    );
-                    if (label != null) await kb.linkDocument(label: label);
-                  },
+                  onPressed: () => _linkCustomDocument(context, kb),
                 ),
               ],
             ),
@@ -107,10 +93,34 @@ class DocumentsPanel extends StatelessWidget {
                         leading: Icon(Icons.description_outlined, color: t.accent),
                         title: Text(doc.displayName, style: TextStyle(fontSize: 13, color: t.keyText)),
                         subtitle: Text(doc.label, style: TextStyle(fontSize: 11, color: t.keyTextSecondary)),
-                        trailing: IconButton(
-                          tooltip: 'Unlink',
-                          icon: Icon(Icons.link_off, size: 18, color: t.icon),
-                          onPressed: () => kb.unlinkDocument(doc.id),
+                        trailing: PopupMenuButton<String>(
+                          tooltip: 'Document actions',
+                          icon: Icon(Icons.more_vert, size: 18, color: t.icon),
+                          onSelected: (action) async {
+                            if (action == 'unlink') {
+                              await kb.unlinkDocument(doc.id);
+                            } else {
+                              final group = await _askText(
+                                context,
+                                action == 'label' ? 'Rename label' : 'Move to folder',
+                                action == 'label' ? doc.label : doc.groupName,
+                              );
+                              if (group != null && group.trim().isNotEmpty) {
+                                if (action == 'label') {
+                                  await kb.documents.relabel(doc.id, group);
+                                  await kb.refreshLinkedDocuments();
+                                } else {
+                                  await kb.moveDocumentToGroup(doc.id, group);
+                                }
+                              }
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'label', child: Text('Rename label')),
+                            PopupMenuItem(value: 'group', child: Text('Move to folder')),
+                            PopupMenuDivider(),
+                            PopupMenuItem(value: 'unlink', child: Text('Unlink document')),
+                          ],
                         ),
                       );
                     },
@@ -120,4 +130,68 @@ class DocumentsPanel extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _linkCustomDocument(
+    BuildContext context,
+    KeyboardController kb,
+  ) async {
+    final values = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => const _DocumentDetailsDialog(),
+    );
+    if (values == null) return;
+    await kb.linkDocument(label: values[0]);
+    final linked = kb.documents.findByLabel(values[0]);
+    if (linked != null) {
+      await kb.documents.moveToGroup(linked.id, values[1]);
+    }
+    await kb.refreshLinkedDocuments();
+  }
+
+  Future<String?> _askText(
+    BuildContext context,
+    String title,
+    String initial,
+  ) async {
+    final controller = TextEditingController(text: initial);
+    return showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Save')),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentDetailsDialog extends StatefulWidget {
+  const _DocumentDetailsDialog();
+  @override
+  State<_DocumentDetailsDialog> createState() => _DocumentDetailsDialogState();
+}
+
+class _DocumentDetailsDialogState extends State<_DocumentDetailsDialog> {
+  final _label = TextEditingController(text: 'General');
+  final _folder = TextEditingController(text: 'General');
+  @override
+  void dispose() { _label.dispose(); _folder.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Link a document'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: _label, decoration: const InputDecoration(labelText: 'Label (e.g. Aadhaar)')),
+            TextField(controller: _folder, decoration: const InputDecoration(labelText: 'Folder (e.g. Identity)')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, [_label.text, _folder.text]), child: const Text('Choose file')),
+        ],
+      );
 }
