@@ -29,7 +29,7 @@ class AppwriteDocumentRepository {
   Future<models.User?> currentUser() async {
     try {
       return await _account.get();
-    } on AppwriteException {
+    } catch (_) {
       return null;
     }
   }

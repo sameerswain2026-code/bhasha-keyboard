@@ -61,6 +61,19 @@ class LanguagePanel extends StatelessWidget {
                   ],
                 ),
               ),
+            if (kb.language.supportsNative && kb.language.supportsRoman)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    kb.scriptMode == ScriptMode.native
+                        ? 'Keys show ${kb.language.nativeName}; typing inserts native script.'
+                        : 'Keys show English letters; typing is transliterated into ${kb.language.nativeName}.',
+                    style: TextStyle(fontSize: 10.5, color: t.keyTextSecondary),
+                  ),
+                ),
+              ),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 6),

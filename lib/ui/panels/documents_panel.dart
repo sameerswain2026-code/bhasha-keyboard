@@ -42,6 +42,9 @@ class DocumentsPanel extends StatelessWidget {
                       items: const [
                         PopupMenuItem(value: 'Resume', child: Text('Resume')),
                         PopupMenuItem(value: 'Education', child: Text('Education')),
+                        PopupMenuItem(value: 'Aadhaar', child: Text('Aadhaar Card')),
+                        PopupMenuItem(value: 'Passport', child: Text('Passport')),
+                        PopupMenuItem(value: 'Certificate', child: Text('Certificate')),
                         PopupMenuItem(value: 'General', child: Text('General')),
                       ],
                     );
@@ -56,6 +59,32 @@ class DocumentsPanel extends StatelessWidget {
             child: Text(
               'Files stay in your selected cloud provider. Bhasha stores only a permission-backed reference and label.',
               style: TextStyle(fontSize: 11, color: t.keyTextSecondary),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: t.accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: t.accent.withValues(alpha: 0.18)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.record_voice_over_outlined, size: 18, color: t.accent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Try: “Bhasha, upload my Aadhaar Card”. You will be asked for device PIN or biometric before sharing.',
+                        style: TextStyle(fontSize: 11, height: 1.35, color: t.keyText),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           if (kb.documentStatus != null)
