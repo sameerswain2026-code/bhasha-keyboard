@@ -297,6 +297,49 @@ void main() {
       kb.dispose();
     });
 
+    test(
+      'native transcribe selection switches the visible keyboard alphabet',
+      () {
+        final kb = KeyboardController();
+        final hindi = LanguageRegistry.byId('hi');
+
+        kb.setTranscribeConfig(hindi, ScriptMode.native);
+
+        expect(kb.transcribeLanguage.id, 'hi');
+        expect(kb.language.id, 'hi');
+        expect(kb.scriptMode, ScriptMode.native);
+        kb.dispose();
+      },
+    );
+
+    test(
+      'every selectable Indian language can use native transcribe output',
+      () {
+        final kb = KeyboardController();
+        for (final language in kLanguagePacks.where((p) => p.id != 'en')) {
+          kb.setTranscribeConfig(language, ScriptMode.native);
+          expect(kb.language.id, language.id);
+          expect(kb.scriptMode, ScriptMode.native);
+        }
+        kb.dispose();
+      },
+    );
+
+    test(
+      'manual translation returns an explicit result without editing host text',
+      () async {
+        final kb = KeyboardController();
+        final result = await kb.translateManualText(
+          'hello',
+          LanguageRegistry.byId('en'),
+          LanguageRegistry.byId('hi'),
+        );
+        expect(result, 'नमस्ते');
+        expect(kb.editor.text, isEmpty);
+        kb.dispose();
+      },
+    );
+
     test('every language has a usable layout', () {
       for (final p in kLanguagePacks) {
         final roman = layoutFor(p, ScriptMode.roman);

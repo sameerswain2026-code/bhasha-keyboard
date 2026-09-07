@@ -90,7 +90,9 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
       await _refreshStatus();
     } catch (error) {
       if (!mounted) return;
-      setState(() => _cloudError = error.toString().replaceFirst('StateError: ', ''));
+      setState(
+        () => _cloudError = error.toString().replaceFirst('StateError: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _cloudBusy = false);
     }
@@ -214,7 +216,9 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                     done: _cloudConnected,
                     buttonLabel: _cloudConnected
                         ? 'Connected'
-                        : (_cloudBusy ? 'Opening Google…' : 'Sign in with Google'),
+                        : (_cloudBusy
+                              ? 'Opening Google…'
+                              : 'Sign in with Google'),
                     onTap: _cloudConnected || _cloudBusy ? null : _connectCloud,
                   ),
                   if (_cloudError != null) ...[
@@ -235,7 +239,9 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                         ],
                       ),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: t.accent.withValues(alpha: 0.22)),
+                      border: Border.all(
+                        color: t.accent.withValues(alpha: 0.22),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -244,7 +250,11 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                         Expanded(
                           child: Text(
                             'Private by design: Bhasha stores labels and references only, never document bytes.',
-                            style: TextStyle(fontSize: 12, height: 1.35, color: t.keyText),
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: t.keyText,
+                            ),
                           ),
                         ),
                       ],

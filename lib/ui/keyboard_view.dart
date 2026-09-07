@@ -33,6 +33,7 @@ import 'panels/documents_panel.dart';
 import 'panels/gif_panel.dart';
 import 'panels/language_panel.dart';
 import 'panels/menu_panel.dart';
+import 'panels/manual_translate_panel.dart';
 import 'panels/resize_panel.dart';
 import 'panels/settings_panel.dart';
 import 'panels/sticker_panel.dart';
@@ -95,6 +96,8 @@ class KeyboardView extends StatelessWidget {
         return const ResizePanel();
       case ActivePanel.translateConfig:
         return const TranslateConfigPanel();
+      case ActivePanel.manualTranslate:
+        return const ManualTranslatePanel();
       case ActivePanel.transcribeLang:
         return const TranscribeLangPanel();
       case ActivePanel.clipboard:

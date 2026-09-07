@@ -234,8 +234,9 @@ class ImeBridge {
     try {
       final text = await _channel.invokeMethod<String>('getSelectedText');
       if (text != null && text.trim().isNotEmpty) return text;
-      final clipboard = await _channel.invokeMethod<String>('getClipboardText');
-      return clipboard?.trim().isEmpty == true ? null : clipboard;
+      // Writing tools must operate only on an actual host selection. The
+      // clipboard is intentionally not an implicit selection fallback.
+      return null;
     } catch (_) {
       return null;
     }
@@ -269,14 +270,16 @@ class ImeBridge {
   }) async {
     try {
       return await _mediaChannel.invokeMethod<bool>('commitMedia', {
-        'bytes': bytes,
-        'mimeType': mimeType,
-        'description': description,
-      }) ?? false;
+            'bytes': bytes,
+            'mimeType': mimeType,
+            'description': description,
+          }) ??
+          false;
     } catch (_) {
       return false;
     }
   }
+
   Future<void> stopSpeaking() async {
     try {
       await _channel.invokeMethod('stopSpeaking');

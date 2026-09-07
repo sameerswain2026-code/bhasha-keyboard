@@ -36,6 +36,7 @@ enum ActivePanel {
   textEditing,
   resize,
   translateConfig, // Translate Configuration Page (source/target/style + Save)
+  manualTranslate, // Explicit text input translation tool
   transcribeLang, // Mic-side language selector for Transcribe mode
   clipboard,
   language, // Keyboard TYPING language (independent of mic), via long-press
@@ -192,7 +193,8 @@ class KeyboardController extends ChangeNotifier {
     await documents.load();
     final document = documents.findByLabel(command.label);
     if (document == null) {
-      _documentStatus = 'No linked ${command.label} document. Link it from Tools → Documents.';
+      _documentStatus =
+          'No linked ${command.label} document. Link it from Tools → Documents.';
       notifyListeners();
       return;
     }
@@ -348,13 +350,15 @@ class KeyboardController extends ChangeNotifier {
   Future<String?> Function()? hostSelectedTextReader;
   Future<void> Function(String text)? hostSelectionReplacer;
   Future<void> Function(String text, String locale)? hostTextSpeaker;
+
   /// Commits image/GIF bytes to the active host app when it supports
   /// Android rich content. The bytes are transient and never persisted.
   Future<bool> Function({
     required Uint8List bytes,
     required String mimeType,
     required String description,
-  })? hostMediaCommitter;
+  })?
+  hostMediaCommitter;
   Future<void> Function(double scale)? hostKeyboardScaleSetter;
 
   Future<bool> insertMedia({
@@ -366,7 +370,9 @@ class KeyboardController extends ChangeNotifier {
     if (committer == null) return false;
     _feedback();
     final committed = await committer(
-      bytes: bytes, mimeType: mimeType, description: description,
+      bytes: bytes,
+      mimeType: mimeType,
+      description: description,
     );
     if (committed) {
       closePanel();
@@ -393,9 +399,9 @@ class KeyboardController extends ChangeNotifier {
   final TranslationEngine _translationEngine = TranslationEngine();
 
   // ---- Transcribe mode config (Method: mic-side Language Selector) ----
-  // Independent of the general typing [_language] - the mic's Transcribe
-  // recognition language defaults to Odia regardless of what script the
-  // user is currently typing in.
+  // The selected transcribe language and output script also drive the visible
+  // alphabet keyboard, avoiding an English QWERTY keyboard after choosing a
+  // native-language transcription mode.
   LanguagePack _transcribeLanguage = LanguageRegistry.byId('or');
   LanguagePack get transcribeLanguage => _transcribeLanguage;
   ScriptMode _transcribeStyle = ScriptMode.roman;
@@ -411,6 +417,12 @@ class KeyboardController extends ChangeNotifier {
       style = ScriptMode.native;
     }
     _transcribeStyle = style;
+    _commitComposing();
+    _language = lang;
+    _scriptMode = style;
+    voice.setScriptMode(style);
+    _persist('language', lang.id);
+    _persist('scriptMode', style.name);
     _persist('transcribeLang', lang.id);
     _persist('transcribeStyle', style.name);
     // Language-code changes require a fresh recognizer session.
@@ -1443,6 +1455,20 @@ class KeyboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears transient state when Android reuses the IME engine for a newly
+  /// focused app or text field.
+  void resetTransientStateForNewInput() {
+    if (voice.isActive) voice.cancelForKeyPress();
+    _aiCapture.cancel();
+    _aiThinking = false;
+    _panel = ActivePanel.none;
+    _panelKeyboardActive = false;
+    _panelInputText = '';
+    _layer = KeyboardLayer.alpha;
+    _shift = ShiftState.off;
+    notifyListeners();
+  }
+
   // =====================================================================
   // Theme & feedback settings
   // =====================================================================
@@ -1469,10 +1495,12 @@ class KeyboardController extends ChangeNotifier {
     if (_hapticsEnabled) {
       try {
         unawaited(
-          _systemChannel.invokeMethod<void>('haptic', <String, dynamic>{
-            'durationMs': 12,
-            'amplitude': 70,
-          }).catchError((_) {}),
+          _systemChannel
+              .invokeMethod<void>('haptic', <String, dynamic>{
+                'durationMs': 12,
+                'amplitude': 70,
+              })
+              .catchError((_) {}),
         );
         HapticFeedback.selectionClick();
         HapticFeedback.lightImpact();
@@ -1733,6 +1761,21 @@ class KeyboardController extends ChangeNotifier {
   /// keyboard language.
   Future<void> translateSelectedText() =>
       translateSelectedTextTo(_language, speak: false);
+
+  /// Translates text entered explicitly in the keyboard's manual translation
+  /// tool. Unlike selection translation, this never mutates the host editor;
+  /// the panel displays the result and lets the user copy or insert it.
+  Future<String?> translateManualText(
+    String text,
+    LanguagePack source,
+    LanguagePack target,
+  ) async {
+    final input = text.trim();
+    if (input.isEmpty) return null;
+    if (source.id == target.id) return input;
+    return await _translationEngine.translate(input, source, target) ?? input;
+  }
+
   Future<void> translateSelectedTextAuto(
     LanguagePack target, {
     bool speak = true,

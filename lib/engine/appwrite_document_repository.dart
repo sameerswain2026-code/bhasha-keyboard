@@ -13,7 +13,7 @@ import 'document_manager.dart';
 
 class AppwriteDocumentRepository {
   AppwriteDocumentRepository({Client? client})
-      : _client = client ?? _newClient() {
+    : _client = client ?? _newClient() {
     _account = Account(_client);
     _tables = TablesDB(_client);
   }
@@ -94,7 +94,9 @@ class AppwriteDocumentRepository {
   }
 
   Future<models.Row?> updateReference(LinkedDocument document) async {
-    if (!CloudConfig.databaseConfigured || document.remoteRowId.isEmpty) return null;
+    if (!CloudConfig.databaseConfigured || document.remoteRowId.isEmpty) {
+      return null;
+    }
     return _tables.updateRow(
       databaseId: CloudConfig.databaseId,
       tableId: CloudConfig.documentLinksCollectionId,
