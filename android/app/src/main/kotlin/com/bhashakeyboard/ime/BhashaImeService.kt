@@ -5,13 +5,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputContentInfo
+import androidx.core.content.FileProvider
+import java.io.File
 import android.widget.FrameLayout
 import android.speech.tts.TextToSpeech
 import java.util.Locale
@@ -55,6 +57,8 @@ class BhashaImeService : InputMethodService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var selfChangeReset: Runnable? = null
     private var textToSpeech: TextToSpeech? = null
+    private var keyboardRoot: FrameLayout? = null
+    private var keyboardScale = 1.0f
 
     /// Set true immediately before WE mutate the host's text via
     /// applyDiff/deleteHostSelection, cleared the moment the resulting
@@ -192,6 +196,20 @@ class BhashaImeService : InputMethodService() {
                         textToSpeech?.stop()
                         result.success(true)
                     }
+                    "setKeyboardScale" -> {
+                        val scale = (call.argument<Double>("scale") ?: 1.0).coerceIn(0.82, 1.18).toFloat()
+                        keyboardScale = scale
+                        val heightPx = TypedValue.applyDimension(
+                            TypedValue.COMPLEX_UNIT_DIP,
+                            KEYBOARD_HEIGHT_DP * scale,
+                            resources.displayMetrics,
+                        ).toInt()
+                        flutterView?.layoutParams = flutterView?.layoutParams?.apply { height = heightPx }
+                        keyboardRoot?.layoutParams = keyboardRoot?.layoutParams?.apply { height = heightPx }
+                        flutterView?.requestLayout()
+                        keyboardRoot?.requestLayout()
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -240,6 +258,35 @@ class BhashaImeService : InputMethodService() {
                     } else {
                         val content = InputContentInfo(uri, android.content.ClipDescription(description, arrayOf(mime)), null)
                         result.success(ic.commitContent(content, 1, Bundle()))
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(
+            engine.dartExecutor.binaryMessenger, "bhasha/ime_media"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "commitMedia" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val mime = call.argument<String>("mimeType") ?: "application/octet-stream"
+                    val description = call.argument<String>("description") ?: "Media"
+                    val ic = currentInputConnection
+                    if (bytes == null || ic == null || android.os.Build.VERSION.SDK_INT < 25) {
+                        result.success(false)
+                    } else {
+                        try {
+                            val extension = if (mime == "image/gif") "gif" else "png"
+                            val file = File(cacheDir, "ime_media_${System.nanoTime()}.$extension")
+                            file.writeBytes(bytes)
+                            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+                            val content = InputContentInfo(uri, android.content.ClipDescription(description, arrayOf(mime)), null)
+                            val committed = ic.commitContent(content, 1, Bundle())
+                            if (!committed) file.delete()
+                            result.success(committed)
+                        } catch (_: Exception) {
+                            result.success(false)
+                        }
                     }
                 }
                 else -> result.notImplemented()
@@ -311,6 +358,8 @@ class BhashaImeService : InputMethodService() {
             )
         }
 
+        keyboardRoot = root
+
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val navBarBottom = insets
                 .getInsets(WindowInsetsCompat.Type.navigationBars())
@@ -319,16 +368,21 @@ class BhashaImeService : InputMethodService() {
             // device, but reserve the navigation-bar strip outside it. This
             // keeps the bottom key row reachable on Telegram, WhatsApp,
             // chat/editor fields, and every panel page.
+            val scaledHeightPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                KEYBOARD_HEIGHT_DP * keyboardScale,
+                resources.displayMetrics,
+            ).toInt()
             val flutterParams = view.layoutParams as FrameLayout.LayoutParams
-            flutterParams.height = heightPx
+            flutterParams.height = scaledHeightPx
             view.layoutParams = flutterParams
             // Make the IME window itself taller than the Flutter surface;
             // padding alone can be ignored by some OEM IME containers.
             v.layoutParams = (v.layoutParams as FrameLayout.LayoutParams).apply {
-                height = heightPx + navBarBottom
+                height = scaledHeightPx + navBarBottom
             }
             v.setPadding(0, 0, 0, navBarBottom)
-            v.minimumHeight = heightPx + navBarBottom
+            v.minimumHeight = scaledHeightPx + navBarBottom
             v.requestLayout()
             // The IME root has explicitly consumed the navigation-bar inset
             // above. Returning the original insets lets some Android/OEM

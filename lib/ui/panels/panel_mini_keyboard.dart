@@ -471,7 +471,10 @@ class _PanelPressableState extends State<PanelPressable> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _setPressed(true),
+      onTapDown: (_) {
+        _setPressed(true);
+        context.read<KeyboardController>().hapticTick();
+      },
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
       onTap: widget.onTap,
@@ -537,7 +540,10 @@ class PanelMiniKeyState extends State<PanelMiniKey> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _setPressed(true),
+      onTapDown: (_) {
+        _setPressed(true);
+        context.read<KeyboardController>().hapticTick();
+      },
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
       onTap: widget.onTap,

@@ -8,6 +8,8 @@
 /// WhatsApp/Telegram/any app always matches what the engine produced.
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 
 import '../core/keyboard_controller.dart';
@@ -21,9 +23,12 @@ class ImeBridge {
     kb.hostSelectedTextReader = getHostSelectedText;
     kb.hostSelectionReplacer = replaceHostSelectedText;
     kb.hostTextSpeaker = speakText;
+    kb.hostMediaCommitter = commitMedia;
+    kb.hostKeyboardScaleSetter = setKeyboardScale;
   }
 
   static const MethodChannel _channel = MethodChannel('bhasha/ime');
+  static const MethodChannel _mediaChannel = MethodChannel('bhasha/ime_media');
 
   final KeyboardController kb;
   String _lastSynced = '';
@@ -253,6 +258,27 @@ class ImeBridge {
     } catch (_) {}
   }
 
+  Future<void> setKeyboardScale(double scale) async {
+    try {
+      await _channel.invokeMethod('setKeyboardScale', {'scale': scale});
+    } catch (_) {}
+  }
+
+  Future<bool> commitMedia({
+    required Uint8List bytes,
+    required String mimeType,
+    required String description,
+  }) async {
+    try {
+      return await _mediaChannel.invokeMethod<bool>('commitMedia', {
+        'bytes': bytes,
+        'mimeType': mimeType,
+        'description': description,
+      }) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
   Future<void> stopSpeaking() async {
     try {
       await _channel.invokeMethod('stopSpeaking');

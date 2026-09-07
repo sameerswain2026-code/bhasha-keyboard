@@ -5,6 +5,7 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ import '../engine/document_manager.dart';
 import '../engine/suggestion_engine.dart';
 import '../engine/transliterator.dart';
 import '../engine/translation_engine.dart';
+import '../engine/writing_assistant.dart';
 import '../engine/voice_engine.dart';
 
 /// Keyboard layout page.
@@ -100,6 +102,33 @@ class KeyboardController extends ChangeNotifier {
   // ---- Sub-engines ----
   final VoiceEngine voice;
   final SuggestionEngine suggestions = SuggestionEngine();
+  final WritingAssistant writingAssistant = WritingAssistant();
+  bool _writingBusy = false;
+  bool get writingBusy => _writingBusy;
+  String? _writingStatus;
+  String? get writingStatus => _writingStatus;
+
+  Future<void> transformSelectedText(WritingAction action) async {
+    final text = await hostSelectedTextReader?.call();
+    if (text == null || text.trim().isEmpty) {
+      _writingStatus = 'Select text first';
+      notifyListeners();
+      return;
+    }
+    _writingBusy = true;
+    _writingStatus = 'Working…';
+    notifyListeners();
+    try {
+      final result = await writingAssistant.transform(text, action);
+      await hostSelectionReplacer?.call(result);
+      _writingStatus = 'Done';
+    } catch (_) {
+      _writingStatus = 'AI unavailable; try again';
+    } finally {
+      _writingBusy = false;
+      notifyListeners();
+    }
+  }
 
   // =====================================================================
   // AI Web Assistant (optional, opt-in - default OFF)
@@ -310,6 +339,32 @@ class KeyboardController extends ChangeNotifier {
   Future<String?> Function()? hostSelectedTextReader;
   Future<void> Function(String text)? hostSelectionReplacer;
   Future<void> Function(String text, String locale)? hostTextSpeaker;
+  /// Commits image/GIF bytes to the active host app when it supports
+  /// Android rich content. The bytes are transient and never persisted.
+  Future<bool> Function({
+    required Uint8List bytes,
+    required String mimeType,
+    required String description,
+  })? hostMediaCommitter;
+  Future<void> Function(double scale)? hostKeyboardScaleSetter;
+
+  Future<bool> insertMedia({
+    required Uint8List bytes,
+    required String mimeType,
+    required String description,
+  }) async {
+    final committer = hostMediaCommitter;
+    if (committer == null) return false;
+    _feedback();
+    final committed = await committer(
+      bytes: bytes, mimeType: mimeType, description: description,
+    );
+    if (committed) {
+      closePanel();
+      notifyListeners();
+    }
+    return committed;
+  }
 
   // ---- Mic mode (Transcribe / Translate / Auto-mix) ----
   // Exactly 3 modes. Default on first open is Transcribe (Odia, Roman).
@@ -455,6 +510,7 @@ class KeyboardController extends ChangeNotifier {
   /// platform-channel haptics call). Use [hapticTick] once, on release.
   void setSizeScale(double scale) {
     _sizeScale = scale.clamp(0.82, 1.18);
+    hostKeyboardScaleSetter?.call(_sizeScale);
     _persist('sizeScale', _sizeScale.toString());
     notifyListeners();
   }
@@ -1395,6 +1451,7 @@ class KeyboardController extends ChangeNotifier {
   void _feedback() {
     if (_hapticsEnabled) {
       try {
+        HapticFeedback.selectionClick();
         HapticFeedback.lightImpact();
       } catch (_) {}
     }
@@ -1653,12 +1710,17 @@ class KeyboardController extends ChangeNotifier {
   /// keyboard language.
   Future<void> translateSelectedText() =>
       translateSelectedTextTo(_language, speak: false);
+  Future<void> translateSelectedTextAuto(
+    LanguagePack target, {
+    bool speak = true,
+  }) => translateSelectedTextTo(target, speak: speak, autoDetect: true);
 
   /// Translates selected host text into [target], replaces the selection and,
   /// when requested, reads the translated result aloud in that language.
   Future<void> translateSelectedTextTo(
     LanguagePack target, {
     bool speak = true,
+    bool autoDetect = false,
   }) async {
     final reader = hostSelectedTextReader;
     final replacer = hostSelectionReplacer;
@@ -1667,18 +1729,30 @@ class KeyboardController extends ChangeNotifier {
     _pendingHostSelection = null;
     if (text == null || text.trim().isEmpty) return;
     String? english;
-    for (final source in kLanguagePacks) {
-      if (source.id == 'en') continue;
-      final candidate = await _translationEngine.translate(
+    if (autoDetect) {
+      final source = _translationEngine.detectLanguage(
+        text,
+        fallback: _language,
+      );
+      english = await _translationEngine.translate(
         text,
         source,
         LanguageRegistry.byId('en'),
       );
-      if (candidate != null &&
-          candidate.trim().isNotEmpty &&
-          candidate != text) {
-        english = candidate;
-        break;
+    } else {
+      for (final source in kLanguagePacks) {
+        if (source.id == 'en') continue;
+        final candidate = await _translationEngine.translate(
+          text,
+          source,
+          LanguageRegistry.byId('en'),
+        );
+        if (candidate != null &&
+            candidate.trim().isNotEmpty &&
+            candidate != text) {
+          english = candidate;
+          break;
+        }
       }
     }
     english ??= text;
@@ -1974,6 +2048,7 @@ class KeyboardController extends ChangeNotifier {
     voice.dispose();
     _aiCapture.dispose();
     _ai.dispose();
+    writingAssistant.dispose();
     super.dispose();
   }
 }
