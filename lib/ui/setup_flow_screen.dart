@@ -15,6 +15,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../ime/setup_helper.dart';
+import '../ime/android_platform.dart';
+import '../engine/appwrite_document_repository.dart';
 import 'kb_theme.dart';
 
 class SetupFlowScreen extends StatefulWidget {
@@ -30,7 +32,13 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
   bool _enabled = false;
   bool _selected = false;
   bool _micGranted = false;
+  bool _cloudConnected = false;
+  bool _cloudBusy = false;
+  String? _cloudError;
   bool _checked = false;
+  AppwriteDocumentRepository? _cloud;
+  AppwriteDocumentRepository get _cloudRepository =>
+      _cloud ??= AppwriteDocumentRepository();
 
   @override
   void initState() {
@@ -57,16 +65,36 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
     final enabled = await ImeSetupHelper.isImeEnabled();
     final selected = await ImeSetupHelper.isImeSelected();
     final mic = await ImeSetupHelper.hasMicPermission();
+    final user = isRunningOnAndroidDevice
+        ? await _cloudRepository.currentUser()
+        : null;
     if (!mounted) return;
     setState(() {
       _enabled = enabled;
       _selected = selected;
       _micGranted = mic;
+      _cloudConnected = user != null;
       _checked = true;
     });
   }
 
   bool get _allDone => _enabled && _selected && _micGranted;
+
+  Future<void> _connectCloud() async {
+    setState(() {
+      _cloudBusy = true;
+      _cloudError = null;
+    });
+    try {
+      await _cloudRepository.signInWithGoogle();
+      await _refreshStatus();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _cloudError = error.toString().replaceFirst('StateError: ', ''));
+    } finally {
+      if (mounted) setState(() => _cloudBusy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,8 +143,8 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Three quick steps to use Bhasha Keyboard in WhatsApp, '
-                    'Telegram and every other app.',
+                    'Set up typing, voice and private document sharing once. '
+                    'Your files stay in your own Google Drive.',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.4,
@@ -174,6 +202,53 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                             await ImeSetupHelper.requestMicPermission();
                             _refreshStatus();
                           },
+                  ),
+                  const SizedBox(height: 12),
+                  _StepCard(
+                    stepNumber: 4,
+                    icon: Icons.cloud_done_outlined,
+                    title: 'Connect Google Drive securely',
+                    subtitle: _cloudConnected
+                        ? 'Connected; document bytes stay in Drive'
+                        : 'Required for “Bhasha, upload my Aadhaar Card.”',
+                    done: _cloudConnected,
+                    buttonLabel: _cloudConnected
+                        ? 'Connected'
+                        : (_cloudBusy ? 'Opening Google…' : 'Sign in with Google'),
+                    onTap: _cloudConnected || _cloudBusy ? null : _connectCloud,
+                  ),
+                  if (_cloudError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _cloudError!,
+                      style: TextStyle(fontSize: 11, color: Colors.redAccent),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          t.accent.withValues(alpha: 0.16),
+                          t.accent.withValues(alpha: 0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: t.accent.withValues(alpha: 0.22)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.shield_outlined, color: t.accent),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Private by design: Bhasha stores labels and references only, never document bytes.',
+                            style: TextStyle(fontSize: 12, height: 1.35, color: t.keyText),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
                   if (_checked && !_allDone)

@@ -3,22 +3,26 @@ package com.bhashakeyboard.ime
 import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.pm.PackageManager
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputContentInfo
+import androidx.core.content.FileProvider
+import java.io.File
 import android.widget.FrameLayout
 import android.speech.tts.TextToSpeech
 import java.util.Locale
-import java.io.File
-import java.io.FileOutputStream
-import java.net.URL
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import android.inputmethodservice.InputMethodService
@@ -58,6 +62,10 @@ class BhashaImeService : InputMethodService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var selfChangeReset: Runnable? = null
     private var textToSpeech: TextToSpeech? = null
+    private var keyboardRoot: FrameLayout? = null
+    private var keyboardScale = 1.0f
+    private var pendingDocumentAuth: MethodChannel.Result? = null
+    private var documentAuthReceiver: BroadcastReceiver? = null
 
     /// Set true immediately before WE mutate the host's text via
     /// applyDiff/deleteHostSelection, cleared the moment the resulting
@@ -195,11 +203,18 @@ class BhashaImeService : InputMethodService() {
                         textToSpeech?.stop()
                         result.success(true)
                     }
-                    "shareMedia" -> {
-                        val source = call.argument<String>("source") ?: ""
-                        val mimeType = call.argument<String>("mimeType") ?: "image/*"
-                        val title = call.argument<String>("title") ?: "Bhasha media"
-                        shareMedia(source, mimeType, title)
+                    "setKeyboardScale" -> {
+                        val scale = (call.argument<Double>("scale") ?: 1.0).coerceIn(0.82, 1.18).toFloat()
+                        keyboardScale = scale
+                        val heightPx = TypedValue.applyDimension(
+                            TypedValue.COMPLEX_UNIT_DIP,
+                            KEYBOARD_HEIGHT_DP * scale,
+                            resources.displayMetrics,
+                        ).toInt()
+                        flutterView?.layoutParams = flutterView?.layoutParams?.apply { height = heightPx }
+                        keyboardRoot?.layoutParams = keyboardRoot?.layoutParams?.apply { height = heightPx }
+                        flutterView?.requestLayout()
+                        keyboardRoot?.requestLayout()
                         result.success(true)
                     }
                     else -> result.notImplemented()
@@ -226,7 +241,107 @@ class BhashaImeService : InputMethodService() {
                     micStream?.stopRecording()
                     result.success(true)
                 }
+                "haptic" -> {
+                    val duration = (call.argument<Int>("durationMs") ?: 12).coerceIn(1, 50).toLong()
+                    val amplitude = (call.argument<Int>("amplitude") ?: 70).coerceIn(1, 255)
+                    val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                    if (vibrator?.hasVibrator() == true) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+                        } else {
+                            @Suppress("DEPRECATION") vibrator.vibrate(duration)
+                        }
+                        result.success(true)
+                    } else {
+                        result.success(false)
+                    }
+                }
                 "isImeEnabled", "isImeSelected" -> result.success(true)
+                else -> result.notImplemented()
+            }
+        }
+
+        // Files are handed to the current app using Android's IME content
+        // API. No file bytes are read by Bhasha and no upload is sent to a
+        // Bhasha server. The IME launches a one-shot device-credential gate
+        // and receives only its boolean result through the package-scoped
+        // broadcast below.
+        MethodChannel(
+            engine.dartExecutor.binaryMessenger, "bhasha/documents"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "authenticateDocument" -> {
+                    pendingDocumentAuth = result
+                    startActivity(Intent(this, DocumentAuthActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                }
+                "commitDocument" -> {
+                    val uri = call.argument<String>("uri")?.let(Uri::parse)
+                    val mime = call.argument<String>("mimeType") ?: "application/octet-stream"
+                    val description = call.argument<String>("displayName") ?: "Document"
+                    val ic = currentInputConnection
+                    if (uri == null || android.os.Build.VERSION.SDK_INT < 25) {
+                        result.success(false)
+                    } else {
+                        val content = InputContentInfo(uri, android.content.ClipDescription(description, arrayOf(mime)), null)
+                        val committed = ic?.commitContent(content, 1, Bundle()) == true
+                        if (committed) {
+                            result.success(true)
+                        } else {
+                            // Some editors do not advertise commitContent. Use the
+                            // platform chooser without copying bytes to Bhasha.
+                            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                type = mime
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }, "Choose app to attach document").apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                            result.success(true)
+                        }
+                    }
+                }
+                "releaseDocument" -> {
+                    val uri = call.argument<String>("uri")?.let(Uri::parse)
+                    if (uri != null) {
+                        runCatching {
+                            contentResolver.releasePersistableUriPermission(
+                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        }
+                    }
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(
+            engine.dartExecutor.binaryMessenger, "bhasha/ime_media"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "commitMedia" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val mime = call.argument<String>("mimeType") ?: "application/octet-stream"
+                    val description = call.argument<String>("description") ?: "Media"
+                    val ic = currentInputConnection
+                    if (bytes == null || ic == null || android.os.Build.VERSION.SDK_INT < 25) {
+                        result.success(false)
+                    } else {
+                        try {
+                            val extension = if (mime == "image/gif") "gif" else "png"
+                            val file = File(cacheDir, "ime_media_${System.nanoTime()}.$extension")
+                            file.writeBytes(bytes)
+                            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+                            val content = InputContentInfo(uri, android.content.ClipDescription(description, arrayOf(mime)), null)
+                            val committed = ic.commitContent(content, 1, Bundle())
+                            if (!committed) file.delete()
+                            result.success(committed)
+                        } catch (_: Exception) {
+                            result.success(false)
+                        }
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -243,6 +358,14 @@ class BhashaImeService : InputMethodService() {
         ).setStreamHandler(micStream)
 
         flutterEngine = engine
+
+        documentAuthReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                pendingDocumentAuth?.success(intent?.getBooleanExtra("authenticated", false) == true)
+                pendingDocumentAuth = null
+            }
+        }
+        registerReceiver(documentAuthReceiver, IntentFilter("com.bhashakeyboard.DOCUMENT_AUTH"), RECEIVER_NOT_EXPORTED)
 
         // Watch the SYSTEM clipboard (not just our own copy button) so
         // that copying text in ANY app (long-press -> Copy in WhatsApp,
@@ -296,6 +419,8 @@ class BhashaImeService : InputMethodService() {
             )
         }
 
+        keyboardRoot = root
+
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val navBarBottom = insets
                 .getInsets(WindowInsetsCompat.Type.navigationBars())
@@ -304,16 +429,21 @@ class BhashaImeService : InputMethodService() {
             // device, but reserve the navigation-bar strip outside it. This
             // keeps the bottom key row reachable on Telegram, WhatsApp,
             // chat/editor fields, and every panel page.
+            val scaledHeightPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                KEYBOARD_HEIGHT_DP * keyboardScale,
+                resources.displayMetrics,
+            ).toInt()
             val flutterParams = view.layoutParams as FrameLayout.LayoutParams
-            flutterParams.height = heightPx
+            flutterParams.height = scaledHeightPx
             view.layoutParams = flutterParams
             // Make the IME window itself taller than the Flutter surface;
             // padding alone can be ignored by some OEM IME containers.
             v.layoutParams = (v.layoutParams as FrameLayout.LayoutParams).apply {
-                height = heightPx + navBarBottom
+                height = scaledHeightPx + navBarBottom
             }
             v.setPadding(0, 0, 0, navBarBottom)
-            v.minimumHeight = heightPx + navBarBottom
+            v.minimumHeight = scaledHeightPx + navBarBottom
             v.requestLayout()
             // The IME root has explicitly consumed the navigation-bar inset
             // above. Returning the original insets lets some Android/OEM
@@ -445,46 +575,11 @@ class BhashaImeService : InputMethodService() {
         ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
 
-    private fun shareMedia(source: String, mimeType: String, title: String) {
-        Thread {
-            try {
-                val extension = if (mimeType == "image/gif") "gif" else "png"
-                val file = File(cacheDir, "bhasha-share-${System.currentTimeMillis()}.$extension")
-                if (source.startsWith("http://") || source.startsWith("https://")) {
-                    URL(source).openStream().use { input ->
-                        FileOutputStream(file).use { output -> input.copyTo(output) }
-                    }
-                } else {
-                    val assetPath = if (source.startsWith("assets/")) {
-                        "flutter_assets/$source"
-                    } else {
-                        "flutter_assets/assets/$source"
-                    }
-                    assets.open(assetPath).use { input ->
-                        FileOutputStream(file).use { output -> input.copyTo(output) }
-                    }
-                }
-                val uri = FileProvider.getUriForFile(
-                    this,
-                    "$packageName.fileprovider",
-                    file
-                )
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = mimeType
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_TITLE, title)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(Intent.createChooser(intent, "Share $title"))
-            } catch (_: Exception) {
-                // The Flutter preview fallback remains available when a host
-                // app or network cannot accept a rich media share.
-            }
-        }.start()
-    }
-
     override fun onDestroy() {
+        documentAuthReceiver?.let { runCatching { unregisterReceiver(it) } }
+        documentAuthReceiver = null
+        pendingDocumentAuth?.error("SERVICE_STOPPED", "Keyboard service stopped", null)
+        pendingDocumentAuth = null
         clipListener?.let { clipboardManager?.removePrimaryClipChangedListener(it) }
         micStream?.stopRecording()
         selfChangeReset?.let { mainHandler.removeCallbacks(it) }

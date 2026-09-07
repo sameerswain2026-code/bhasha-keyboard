@@ -284,4 +284,31 @@ class TranslationEngine {
   Future<String?> translate(String text, LanguagePack from, LanguagePack to) {
     return _provider.translate(text, from, to);
   }
+
+  /// Detects a source language from Unicode script signals. Languages that
+  /// share a script fall back to the current keyboard language.
+  LanguagePack detectLanguage(String text, {LanguagePack? fallback}) {
+    final counts = <String, int>{};
+    for (final rune in text.runes) {
+      final id = switch (rune) {
+        >= 0x0980 && <= 0x09FF => 'bn',
+        >= 0x0B00 && <= 0x0B7F => 'or',
+        >= 0x0B80 && <= 0x0BFF => 'ta',
+        >= 0x0C00 && <= 0x0C7F => 'te',
+        >= 0x0C80 && <= 0x0CFF => 'kn',
+        >= 0x0D00 && <= 0x0D7F => 'ml',
+        >= 0x0A80 && <= 0x0AFF => 'gu',
+        >= 0x0A00 && <= 0x0A7F => 'pa',
+        >= 0x0600 && <= 0x06FF => 'ur',
+        >= 0x11000 && <= 0x1107F => 'sat',
+        >= 0xABC0 && <= 0xABFF => 'mni',
+        >= 0x0900 && <= 0x097F => 'hi',
+        _ => null,
+      };
+      if (id != null) counts[id] = (counts[id] ?? 0) + 1;
+    }
+    if (counts.isEmpty) return fallback ?? LanguageRegistry.byId('en');
+    final id = counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    return LanguageRegistry.byId(id);
+  }
 }

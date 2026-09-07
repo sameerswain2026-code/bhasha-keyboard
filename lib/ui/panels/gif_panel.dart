@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 
 import '../../core/keyboard_controller.dart';
 import '../../engine/gif_provider.dart';
@@ -39,19 +40,24 @@ class _GifPanelState extends State<GifPanel> {
     setState(() => _category = category);
   }
 
-  void _insertGif(BuildContext context, GifItem gif) {
+  Future<void> _insertGif(BuildContext context, GifItem gif) async {
     final kb = context.read<KeyboardController>();
-    final share = kb.hostMediaSharer;
-    if (share != null) {
-      share(gif.shareUrl, 'image/gif', gif.title);
-    } else {
-      // Web/demo fallback when no Android share bridge is available.
-      kb.insertContent('[GIF: ${gif.title}] ${gif.shareUrl}');
-    }
+    try {
+      final response = await http.get(Uri.parse(gif.shareUrl));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        final committed = await kb.insertMedia(
+          bytes: response.bodyBytes,
+          mimeType: 'image/gif',
+          description: gif.title,
+        );
+        if (committed) return;
+      }
+    } catch (_) {}
+    kb.insertContent(gif.shareUrl);
     kb.closePanel();
-    if (share == null) {
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('GIF link inserted in preview editor')),
+        const SnackBar(content: Text('GIF link inserted; this app does not accept GIF content.')),
       );
     }
   }

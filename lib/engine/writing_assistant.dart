@@ -1,57 +1,29 @@
-/// Lightweight writing assistant used by the keyboard's Text Editing panel.
-/// The interface is provider-ready: these safe offline transforms work without
-/// network access, while a Gemini provider can be added behind the same API.
+/// Writing transformations powered by the existing Gemini service.
 library;
 
+import 'gemini_service.dart';
+
+enum WritingAction { grammar, rewrite, professional, friendly, concise, reply }
+
 class WritingAssistant {
-  const WritingAssistant();
+  WritingAssistant({GeminiService? gemini}) : _gemini = gemini ?? GeminiService();
+  final GeminiService _gemini;
 
-  String fixGrammar(String input) {
-    var text = input.trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (text.isEmpty) return text;
-    text = text.replaceAll(RegExp(r'\s+([,.!?])'), r'\1');
-    text = text.replaceAll(RegExp(r'([.!?])([A-Za-z])'), r'\1 \2');
-    text = text[0].toUpperCase() + text.substring(1);
-    if (!RegExp(r'[.!?]$').hasMatch(text)) text = '$text.';
-    return text;
+  Future<String> transform(String text, WritingAction action) {
+    final instruction = switch (action) {
+      WritingAction.grammar => 'Correct grammar, spelling, punctuation, and natural phrasing.',
+      WritingAction.rewrite => 'Rewrite this clearly while preserving the exact meaning.',
+      WritingAction.professional => 'Rewrite this in a polished professional tone.',
+      WritingAction.friendly => 'Rewrite this in a warm, friendly, natural tone.',
+      WritingAction.concise => 'Make this concise without losing important meaning.',
+      WritingAction.reply => 'Write one short, appropriate reply to this message.',
+    };
+    return _gemini.generateWriting(
+      'You are a writing assistant inside a mobile keyboard. $instruction '
+      'Return only the final text, with no explanation or quotation marks.\n\n'
+      'Text:\n$text',
+    );
   }
 
-  String rewrite(String input, {WritingTone tone = WritingTone.clear}) {
-    final cleaned = fixGrammar(input);
-    if (cleaned.isEmpty) return cleaned;
-    switch (tone) {
-      case WritingTone.clear:
-        return cleaned;
-      case WritingTone.formal:
-        return cleaned
-            .replaceAll(
-              RegExp(r'\b(can’t|cant)\b', caseSensitive: false),
-              'cannot',
-            )
-            .replaceAll(
-              RegExp(r'\bthanks\b', caseSensitive: false),
-              'thank you',
-            )
-            .replaceAll(RegExp(r'\bhey\b', caseSensitive: false), 'Hello');
-      case WritingTone.friendly:
-        return cleaned.replaceFirst(RegExp(r'\.$'), ' 😊.');
-      case WritingTone.concise:
-        final parts = cleaned.split(RegExp(r'[,;]'));
-        return parts.first.trim().replaceFirst(RegExp(r'\.$'), '.');
-    }
-  }
-
-  String suggestReply(String input) {
-    final text = input.toLowerCase();
-    if (text.contains('thank')) return 'You’re welcome!';
-    if (text.contains('meeting') || text.contains('call')) {
-      return 'Sure, that works for me. What time should we meet?';
-    }
-    if (text.contains('?')) {
-      return 'Thanks for asking. I’ll get back to you shortly.';
-    }
-    return 'Thanks for your message. I’ll reply soon.';
-  }
+  void dispose() => _gemini.dispose();
 }
-
-enum WritingTone { clear, formal, friendly, concise }

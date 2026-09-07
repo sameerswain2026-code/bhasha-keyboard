@@ -41,7 +41,7 @@ class TextEditingPanel extends StatelessWidget {
                 subtitle: Text(pack.locale),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  await kb.translateSelectedTextTo(pack, speak: true);
+                  await kb.translateSelectedTextAuto(pack, speak: true);
                 },
               );
             },
@@ -137,8 +137,33 @@ class TextEditingPanel extends StatelessWidget {
                   action(Icons.last_page, 'Go to end', kb.moveCursorToEnd),
                   action(
                     Icons.translate,
-                    'Translate selection',
+                    'Auto translate',
                     () => _chooseTranslationLanguage(context, kb, t),
+                  ),
+                  action(
+                    Icons.spellcheck,
+                    'Fix grammar',
+                    () => kb.transformSelectedText(WritingAction.grammar),
+                  ),
+                  action(
+                    Icons.auto_fix_high,
+                    'Rewrite',
+                    () => kb.transformSelectedText(WritingAction.rewrite),
+                  ),
+                  action(
+                    Icons.work_outline,
+                    'Professional',
+                    () => kb.transformSelectedText(WritingAction.professional),
+                  ),
+                  action(
+                    Icons.sentiment_satisfied_alt,
+                    'Friendly tone',
+                    () => kb.transformSelectedText(WritingAction.friendly),
+                  ),
+                  action(
+                    Icons.reply,
+                    'Suggest reply',
+                    () => kb.transformSelectedText(WritingAction.reply),
                   ),
                   action(
                     Icons.volume_up_outlined,

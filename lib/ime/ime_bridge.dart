@@ -21,10 +21,12 @@ class ImeBridge {
     kb.hostSelectedTextReader = getHostSelectedText;
     kb.hostSelectionReplacer = replaceHostSelectedText;
     kb.hostTextSpeaker = speakText;
-    kb.hostMediaSharer = shareMedia;
+    kb.hostMediaCommitter = commitMedia;
+    kb.hostKeyboardScaleSetter = setKeyboardScale;
   }
 
   static const MethodChannel _channel = MethodChannel('bhasha/ime');
+  static const MethodChannel _mediaChannel = MethodChannel('bhasha/ime_media');
 
   final KeyboardController kb;
   String _lastSynced = '';
@@ -38,10 +40,6 @@ class ImeBridge {
       case 'startInput':
         final args = (call.arguments as Map?) ?? {};
         final action = args['action'] as String? ?? 'newline';
-        // Android keeps one IME FlutterEngine alive across apps. Clear any
-        // open settings/panel/symbol page and stop voice before the new host
-        // field is shown, so WhatsApp -> Telegram never resumes in Settings.
-        kb.resetTransientStateForNewInput();
         kb.setEditorAction(
           EditorAction.values.firstWhere(
             (a) => a.name == action,
@@ -56,7 +54,6 @@ class ImeBridge {
         // user types at least one new character first.
         await _resyncEditorFromHost();
       case 'finishInput':
-        kb.resetTransientStateForNewInput();
         _resetEditor();
       case 'externalTextChanged':
         // The host's text changed by a means we did NOT initiate -
@@ -237,12 +234,8 @@ class ImeBridge {
     try {
       final text = await _channel.invokeMethod<String>('getSelectedText');
       if (text != null && text.trim().isNotEmpty) return text;
-      // Do not fall back to clipboard contents here. Writing tools such as
-      // Grammar Fix and Rewrite operate on the host selection; using the
-      // clipboard as an implicit selection can unexpectedly replace unrelated
-      // text in the focused app. Clipboard paste remains an explicit action in
-      // the text-editing panel.
-      return null;
+      final clipboard = await _channel.invokeMethod<String>('getClipboardText');
+      return clipboard?.trim().isEmpty == true ? null : clipboard;
     } catch (_) {
       return null;
     }
@@ -263,19 +256,30 @@ class ImeBridge {
     } catch (_) {}
   }
 
-  Future<void> stopSpeaking() async {
+  Future<void> setKeyboardScale(double scale) async {
     try {
-      await _channel.invokeMethod('stopSpeaking');
+      await _channel.invokeMethod('setKeyboardScale', {'scale': scale});
     } catch (_) {}
   }
 
-  Future<void> shareMedia(String source, String mimeType, String title) async {
+  Future<bool> commitMedia({
+    required Uint8List bytes,
+    required String mimeType,
+    required String description,
+  }) async {
     try {
-      await _channel.invokeMethod('shareMedia', {
-        'source': source,
+      return await _mediaChannel.invokeMethod<bool>('commitMedia', {
+        'bytes': bytes,
         'mimeType': mimeType,
-        'title': title,
-      });
+        'description': description,
+      }) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+  Future<void> stopSpeaking() async {
+    try {
+      await _channel.invokeMethod('stopSpeaking');
     } catch (_) {}
   }
 

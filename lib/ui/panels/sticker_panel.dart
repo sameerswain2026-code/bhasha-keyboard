@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/keyboard_controller.dart';
 import '../../data/sticker_data.dart';
@@ -27,12 +28,15 @@ class StickerPanel extends StatefulWidget {
 class _StickerPanelState extends State<StickerPanel> {
   int _categoryIndex = 0; // 0 = recents, 1..n = categories
 
-  void _send(KeyboardController kb, StickerEntry sticker) {
-    final share = kb.hostMediaSharer;
-    if (share != null) {
-      share(sticker.asset, 'image/png', sticker.label);
-    } else {
-      kb.insertContent('[Sticker: ${sticker.label}]');
+  Future<void> _send(KeyboardController kb, StickerEntry sticker) async {
+    final data = await rootBundle.load(sticker.asset);
+    final committed = await kb.insertMedia(
+      bytes: data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      mimeType: 'image/png',
+      description: sticker.label,
+    );
+    if (!committed) {
+      kb.insertContent(sticker.asset);
     }
     kb.addRecentSticker(sticker.id);
     kb.closePanel();

@@ -161,6 +161,18 @@ class GeminiService {
     return trimmed;
   }
 
+  /// Generates a short plain-text writing transformation. This reuses the
+  /// same Gemini key pool, timeout, and failure behavior as the existing AI
+  /// assistant; it is not a second AI client or assistant architecture.
+  Future<String> generateWriting(String prompt) async {
+    final text = await _generateText(prompt);
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw const FormatException('Gemini: empty writing response');
+    }
+    return trimmed;
+  }
+
   int? _requestedItemCount(String query) {
     final match = RegExp(
       r'(?:^|\s)(\d{1,3})\s*(?:items?|things?|dialogues?|'
