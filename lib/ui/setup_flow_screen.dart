@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../ime/setup_helper.dart';
+import '../ime/android_platform.dart';
 import '../engine/appwrite_document_repository.dart';
 import 'kb_theme.dart';
 
@@ -35,7 +36,9 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
   bool _cloudBusy = false;
   String? _cloudError;
   bool _checked = false;
-  final _cloud = AppwriteDocumentRepository();
+  AppwriteDocumentRepository? _cloud;
+  AppwriteDocumentRepository get _cloudRepository =>
+      _cloud ??= AppwriteDocumentRepository();
 
   @override
   void initState() {
@@ -62,7 +65,9 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
     final enabled = await ImeSetupHelper.isImeEnabled();
     final selected = await ImeSetupHelper.isImeSelected();
     final mic = await ImeSetupHelper.hasMicPermission();
-    final user = await _cloud.currentUser();
+    final user = isRunningOnAndroidDevice
+        ? await _cloudRepository.currentUser()
+        : null;
     if (!mounted) return;
     setState(() {
       _enabled = enabled;
@@ -81,7 +86,7 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
       _cloudError = null;
     });
     try {
-      await _cloud.signInWithGoogle();
+      await _cloudRepository.signInWithGoogle();
       await _refreshStatus();
     } catch (error) {
       if (!mounted) return;

@@ -13,7 +13,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/languages.dart';
 import '../engine/ai_assistant_engine.dart';
 import '../engine/ai_command_capture.dart';
-import '../engine/appwrite_document_repository.dart';
 import '../engine/document_manager.dart';
 import '../engine/suggestion_engine.dart';
 import '../engine/transliterator.dart';
@@ -76,8 +75,7 @@ class KeyboardController extends ChangeNotifier {
   }) : voice = voiceEngine ?? VoiceEngine(),
        _ai = aiEngine ?? AiAssistantEngine(),
        _aiCapture = aiCapture ?? AiCommandCapture(),
-       documents = documentManager ??
-           DocumentManager(repository: AppwriteDocumentRepository()) {
+       documents = documentManager ?? DocumentManager() {
     voice.onFinalText = _onVoiceFinal;
     voice.onPartialText = (_) => notifyListeners();
     voice.onSessionEnd = _onVoiceSessionEnd;

@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/keyboard_controller.dart';
+import 'engine/appwrite_document_repository.dart';
+import 'engine/document_manager.dart';
 import 'engine/voice_factory.dart';
 import 'ime/android_platform.dart';
 import 'ime/ime_bridge.dart';
@@ -35,7 +37,12 @@ class BhashaKeyboardApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => KeyboardController(voiceEngine: createVoiceEngine()),
+      create: (_) => KeyboardController(
+        voiceEngine: createVoiceEngine(),
+        documentManager: DocumentManager(
+          repository: AppwriteDocumentRepository(),
+        ),
+      ),
       child: Consumer<KeyboardController>(
         builder: (context, kb, _) {
           return MaterialApp(
@@ -132,7 +139,12 @@ class _BhashaImeAppState extends State<BhashaImeApp> {
   @override
   void initState() {
     super.initState();
-    _kb = KeyboardController(voiceEngine: createVoiceEngine());
+    _kb = KeyboardController(
+      voiceEngine: createVoiceEngine(),
+      documentManager: DocumentManager(
+        repository: AppwriteDocumentRepository(),
+      ),
+    );
     _bridge = ImeBridge(_kb);
     _kb.onEditorActionTriggered = _bridge.performAction;
   }
