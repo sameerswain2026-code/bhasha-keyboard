@@ -1,6 +1,9 @@
 name: Production Android Build
 
 on:
+  push:
+    branches:
+      - feat/secure-cloud-linked-documents
   workflow_dispatch:
     inputs:
       publish_release:
