@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
@@ -12,7 +14,11 @@ import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
 import android.speech.tts.TextToSpeech
 import java.util.Locale
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import android.inputmethodservice.InputMethodService
@@ -187,6 +193,13 @@ class BhashaImeService : InputMethodService() {
                     }
                     "stopSpeaking" -> {
                         textToSpeech?.stop()
+                        result.success(true)
+                    }
+                    "shareMedia" -> {
+                        val source = call.argument<String>("source") ?: ""
+                        val mimeType = call.argument<String>("mimeType") ?: "image/*"
+                        val title = call.argument<String>("title") ?: "Bhasha media"
+                        shareMedia(source, mimeType, title)
                         result.success(true)
                     }
                     else -> result.notImplemented()
@@ -431,6 +444,45 @@ class BhashaImeService : InputMethodService() {
     private fun hasMic(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
+
+    private fun shareMedia(source: String, mimeType: String, title: String) {
+        Thread {
+            try {
+                val extension = if (mimeType == "image/gif") "gif" else "png"
+                val file = File(cacheDir, "bhasha-share-${System.currentTimeMillis()}.$extension")
+                if (source.startsWith("http://") || source.startsWith("https://")) {
+                    URL(source).openStream().use { input ->
+                        FileOutputStream(file).use { output -> input.copyTo(output) }
+                    }
+                } else {
+                    val assetPath = if (source.startsWith("assets/")) {
+                        "flutter_assets/$source"
+                    } else {
+                        "flutter_assets/assets/$source"
+                    }
+                    assets.open(assetPath).use { input ->
+                        FileOutputStream(file).use { output -> input.copyTo(output) }
+                    }
+                }
+                val uri = FileProvider.getUriForFile(
+                    this,
+                    "$packageName.fileprovider",
+                    file
+                )
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = mimeType
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_TITLE, title)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(Intent.createChooser(intent, "Share $title"))
+            } catch (_: Exception) {
+                // The Flutter preview fallback remains available when a host
+                // app or network cannot accept a rich media share.
+            }
+        }.start()
+    }
 
     override fun onDestroy() {
         clipListener?.let { clipboardManager?.removePrimaryClipChangedListener(it) }
