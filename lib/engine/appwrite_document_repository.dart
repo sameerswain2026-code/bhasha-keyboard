@@ -15,7 +15,7 @@ class AppwriteDocumentRepository {
   AppwriteDocumentRepository({Client? client})
       : _client = client ?? _newClient() {
     _account = Account(_client);
-    _databases = Databases(_client);
+    _tables = TablesDB(_client);
   }
 
   static Client _newClient() => Client()
@@ -24,7 +24,7 @@ class AppwriteDocumentRepository {
 
   final Client _client;
   late final Account _account;
-  late final Databases _databases;
+  late final TablesDB _tables;
 
   Future<models.User?> currentUser() async {
     try {
@@ -46,7 +46,7 @@ class AppwriteDocumentRepository {
     );
   }
 
-  Future<models.Document?> saveReference({
+  Future<models.Row?> saveReference({
     required LinkedDocument document,
     required String driveFileId,
     String? driveFolderId,
@@ -56,10 +56,10 @@ class AppwriteDocumentRepository {
       throw StateError('Appwrite database is not configured');
     }
     final user = await _account.get();
-    return _databases.createDocument(
+    return _tables.createRow(
       databaseId: CloudConfig.databaseId,
-      collectionId: CloudConfig.documentLinksCollectionId,
-      documentId: ID.unique(),
+      tableId: CloudConfig.documentLinksCollectionId,
+      rowId: ID.unique(),
       permissions: [
         Permission.read(Role.user(user.$id)),
         Permission.update(Role.user(user.$id)),
@@ -84,10 +84,10 @@ class AppwriteDocumentRepository {
 
   Future<void> deleteReference(String documentId) async {
     if (!CloudConfig.databaseConfigured) return;
-    await _databases.deleteDocument(
+    await _tables.deleteRow(
       databaseId: CloudConfig.databaseId,
-      collectionId: CloudConfig.documentLinksCollectionId,
-      documentId: documentId,
+      tableId: CloudConfig.documentLinksCollectionId,
+      rowId: documentId,
     );
   }
 
