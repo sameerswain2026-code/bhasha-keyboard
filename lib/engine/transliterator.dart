@@ -254,6 +254,39 @@ class Transliterator {
     }
   }
 
+  /// Converts a translated native-script result into readable Roman text.
+  /// Unknown punctuation or characters are preserved instead of discarded.
+  static String romanize(String native, LanguagePack pack) {
+    if (native.isEmpty || pack.isLatin) return native;
+    if (pack.family == ScriptFamily.arabic) {
+      final reverse = <String, String>{
+        for (final entry in _arabicMap.entries)
+          entry.value: entry.key.toLowerCase(),
+      };
+      return native.runes
+          .map((r) => reverse[String.fromCharCode(r)] ?? String.fromCharCode(r))
+          .join();
+    }
+    if (pack.family != ScriptFamily.brahmic) return native;
+
+    final reverse = <int, String>{};
+    for (final entry in _consonants.entries) {
+      reverse[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
+    }
+    for (final entry in _vowelsInd.entries) {
+      reverse[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
+    }
+    for (final entry in _matras.entries) {
+      reverse[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
+    }
+    reverse[pack.scriptBase + _fold(_anusvara, pack)] = 'ṃ';
+    reverse[pack.scriptBase + _fold(_visarga, pack)] = 'ḥ';
+    reverse[pack.scriptBase + _fold(_candrabindu, pack)] = 'ṃ';
+    reverse[pack.scriptBase + _fold(_virama, pack)] = '';
+
+    return native.runes.map((r) => reverse[r] ?? String.fromCharCode(r)).join();
+  }
+
   static String _mapSimple(
     String roman,
     Map<String, String> map,

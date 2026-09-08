@@ -1808,12 +1808,21 @@ class KeyboardController extends ChangeNotifier {
   Future<String?> translateManualText(
     String text,
     LanguagePack source,
-    LanguagePack target,
-  ) async {
+    LanguagePack target, {
+    ScriptMode outputStyle = ScriptMode.native,
+  }) async {
     final input = text.trim();
     if (input.isEmpty) return null;
-    if (source.id == target.id) return input;
-    return await _translationEngine.translate(input, source, target) ?? input;
+    if (source.id == target.id) {
+      return outputStyle == ScriptMode.roman
+          ? Transliterator.romanize(input, target)
+          : input;
+    }
+    final translated =
+        await _translationEngine.translate(input, source, target) ?? input;
+    return outputStyle == ScriptMode.roman
+        ? Transliterator.romanize(translated, target)
+        : translated;
   }
 
   Future<void> translateSelectedTextAuto(
@@ -1870,8 +1879,11 @@ class KeyboardController extends ChangeNotifier {
                 target,
               ) ??
               english;
-    await replacer(translated);
-    if (speak) await hostTextSpeaker?.call(translated, target.locale);
+    final output = _translateOutputStyle == ScriptMode.roman
+        ? Transliterator.romanize(translated, target)
+        : translated;
+    await replacer(output);
+    if (speak) await hostTextSpeaker?.call(output, target.locale);
   }
 
   void selectAll() {

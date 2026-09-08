@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/keyboard_controller.dart';
 import '../../data/languages.dart';
+import '../../engine/transliterator.dart';
 import '../kb_theme.dart';
 import 'panel_mini_keyboard.dart';
 
@@ -24,6 +25,7 @@ class ManualTranslatePanel extends StatefulWidget {
 class _ManualTranslatePanelState extends State<ManualTranslatePanel> {
   LanguagePack _source = LanguageRegistry.byId('en');
   LanguagePack _target = LanguageRegistry.byId('hi');
+  ScriptMode _outputStyle = ScriptMode.native;
   String? _result;
   bool _busy = false;
 
@@ -31,7 +33,12 @@ class _ManualTranslatePanelState extends State<ManualTranslatePanel> {
     final input = kb.panelInputText.trim();
     if (input.isEmpty || _busy) return;
     setState(() => _busy = true);
-    final output = await kb.translateManualText(input, _source, _target);
+    final output = await kb.translateManualText(
+      input,
+      _source,
+      _target,
+      outputStyle: _outputStyle,
+    );
     if (!mounted) return;
     setState(() {
       _result = output;
@@ -111,6 +118,33 @@ class _ManualTranslatePanelState extends State<ManualTranslatePanel> {
                 ),
               ),
             ],
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              children: [
+                Text(
+                  'Output',
+                  style: TextStyle(fontSize: 10, color: t.keyTextSecondary),
+                ),
+                ChoiceChip(
+                  label: const Text('Native', style: TextStyle(fontSize: 11)),
+                  selected: _outputStyle == ScriptMode.native,
+                  onSelected: (_) =>
+                      setState(() => _outputStyle = ScriptMode.native),
+                  visualDensity: VisualDensity.compact,
+                ),
+                ChoiceChip(
+                  label: const Text('Roman', style: TextStyle(fontSize: 11)),
+                  selected: _outputStyle == ScriptMode.roman,
+                  onSelected: (_) =>
+                      setState(() => _outputStyle = ScriptMode.roman),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 5),
           if (kb.panelKeyboardActive)
