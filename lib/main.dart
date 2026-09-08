@@ -15,7 +15,7 @@ import 'ime/android_platform.dart';
 import 'ime/ime_bridge.dart';
 import 'ui/kb_theme.dart';
 import 'ui/keyboard_view.dart';
-import 'ui/setup_flow_screen.dart';
+import 'ui/welcome_flow_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,10 +69,9 @@ class BhashaKeyboardApp extends StatelessWidget {
   }
 }
 
-/// Decides whether to show the one-time Android setup flow (enable IME,
-/// select IME, grant mic) before the demo editor. Only ever gates real
-/// Android launches - web preview and `flutter test` (host VM) go
-/// straight to the demo editor.
+/// Decides whether to show the branded first-run flow before the dashboard.
+/// Keyboard setup is deliberately not a launch gate; it is available from
+/// Settings and from the welcome flow when the user chooses it.
 class _AppHome extends StatefulWidget {
   const _AppHome();
 
@@ -81,8 +80,8 @@ class _AppHome extends StatefulWidget {
 }
 
 class _AppHomeState extends State<_AppHome> {
-  static const _prefKey = 'setup_flow_seen';
-  bool? _showSetup;
+  static const _prefKey = 'welcome_flow_seen';
+  bool? _showWelcome;
 
   @override
   void initState() {
@@ -92,32 +91,32 @@ class _AppHomeState extends State<_AppHome> {
 
   Future<void> _decide() async {
     if (!isRunningOnAndroidDevice) {
-      setState(() => _showSetup = false);
+      setState(() => _showWelcome = false);
       return;
     }
     try {
       final prefs = await SharedPreferences.getInstance();
-      setState(() => _showSetup = !(prefs.getBool(_prefKey) ?? false));
+      setState(() => _showWelcome = !(prefs.getBool(_prefKey) ?? false));
     } catch (_) {
-      setState(() => _showSetup = false);
+      setState(() => _showWelcome = false);
     }
   }
 
-  Future<void> _completeSetup() async {
+  Future<void> _completeWelcome() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefKey, true);
     } catch (_) {}
-    if (mounted) setState(() => _showSetup = false);
+    if (mounted) setState(() => _showWelcome = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_showSetup == null) {
+    if (_showWelcome == null) {
       return const Scaffold(body: SizedBox.shrink());
     }
-    if (_showSetup == true) {
-      return SetupFlowScreen(onContinue: _completeSetup);
+    if (_showWelcome == true) {
+      return WelcomeFlowScreen(onFinished: _completeWelcome);
     }
     return const DemoEditorScreen();
   }
