@@ -158,7 +158,15 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                       color: t.keyTextSecondary,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
+                  _OnboardingFeatureShowcase(
+                    connected: _cloudConnected,
+                    busy: _cloudBusy,
+                    onGoogleTap: _cloudConnected || _cloudBusy
+                        ? null
+                        : _connectCloud,
+                  ),
+                  const SizedBox(height: 10),
                   _StepCard(
                     stepNumber: 1,
                     icon: Icons.keyboard_alt_outlined,
@@ -209,22 +217,6 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                             await ImeSetupHelper.requestMicPermission();
                             _refreshStatus();
                           },
-                  ),
-                  const SizedBox(height: 12),
-                  _StepCard(
-                    stepNumber: 4,
-                    icon: Icons.cloud_done_outlined,
-                    title: 'Connect Google Drive securely',
-                    subtitle: _cloudConnected
-                        ? 'Connected; document bytes stay in Drive'
-                        : 'Required for “Bhasha, upload my Aadhaar Card.”',
-                    done: _cloudConnected,
-                    buttonLabel: _cloudConnected
-                        ? 'Connected'
-                        : (_cloudBusy
-                              ? 'Opening Google…'
-                              : 'Sign in with Google'),
-                    onTap: _cloudConnected || _cloudBusy ? null : _connectCloud,
                   ),
                   if (_cloudError != null) ...[
                     const SizedBox(height: 8),
@@ -347,6 +339,143 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OnboardingFeatureShowcase extends StatefulWidget {
+  final bool connected;
+  final bool busy;
+  final VoidCallback? onGoogleTap;
+
+  const _OnboardingFeatureShowcase({
+    required this.connected,
+    required this.busy,
+    required this.onGoogleTap,
+  });
+
+  @override
+  State<_OnboardingFeatureShowcase> createState() =>
+      _OnboardingFeatureShowcaseState();
+}
+
+class _OnboardingFeatureShowcaseState extends State<_OnboardingFeatureShowcase>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = KbTheme.of(context);
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final lift = 4 * Curves.easeInOut.transform(_controller.value);
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                t.accent.withValues(alpha: 0.16),
+                const Color(0xFF7C4DFF).withValues(alpha: 0.10),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: t.accent.withValues(alpha: 0.22)),
+          ),
+          child: Row(
+            children: [
+              Transform.translate(
+                offset: Offset(0, -lift),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: t.accent,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: t.accent.withValues(alpha: 0.28),
+                        blurRadius: 18,
+                        offset: Offset(0, 6 + lift),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.translate_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.connected
+                          ? 'Google Drive connected securely'
+                          : 'One keyboard. Every voice.',
+                      style: TextStyle(
+                        color: t.keyText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      widget.connected
+                          ? 'Your private document dashboard is ready.'
+                          : '22 native scripts, voice typing, translation and protected document sharing in one calm workflow.',
+                      style: TextStyle(
+                        color: t.keyTextSecondary,
+                        fontSize: 10,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 26,
+                      child: OutlinedButton.icon(
+                        onPressed: widget.onGoogleTap,
+                        icon: Icon(
+                          widget.connected
+                              ? Icons.verified_outlined
+                              : Icons.login,
+                          size: 14,
+                        ),
+                        label: Text(
+                          widget.connected
+                              ? 'Google connected'
+                              : widget.busy
+                              ? 'Opening Google…'
+                              : 'Sign in with Google',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -500,13 +500,17 @@ class KeyboardController extends ChangeNotifier {
     _persist('translateTarget', _translateTarget.id);
     _persist('translateStyle', _translateOutputStyle.name);
     _persist('translateEverActivated', true);
-    // Translation output is also the user's next typing context. This keeps
-    // the live keycaps aligned with the selected target: English -> Odia,
-    // Telugu -> Odia, and Odia -> Telugu all show the target script rather
-    // than falling back to generic A-B-C keycaps.
-    setLanguage(_translateTarget);
+    // Roman Translate output always uses English keycaps. The target remains
+    // part of the translation configuration, but must not switch the visible
+    // keyboard to a native target script in Roman mode.
+    final visibleLanguage = _translateOutputStyle == ScriptMode.roman
+        ? LanguageRegistry.byId('en')
+        : _translateTarget;
+    setLanguage(visibleLanguage);
     setScriptMode(
-      _translateTarget.isLatin ? ScriptMode.roman : ScriptMode.native,
+      _translateOutputStyle == ScriptMode.native && !_translateTarget.isLatin
+          ? ScriptMode.native
+          : ScriptMode.roman,
     );
     setMicMode(MicMode.translate);
     closePanel();
@@ -1740,7 +1744,9 @@ class KeyboardController extends ChangeNotifier {
                   ) ??
                   text;
       }
-      if (_translateTarget.id == 'en') {
+      // Roman output deliberately stays in English letters for every target.
+      if (_translateOutputStyle == ScriptMode.roman ||
+          _translateTarget.id == 'en') {
         return english;
       }
       // Pivot English -> target (native-script result; see limitation

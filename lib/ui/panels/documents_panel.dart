@@ -110,62 +110,100 @@ class DocumentsPanel extends StatelessWidget {
                     itemCount: kb.documents.documents.length,
                     itemBuilder: (_, index) {
                       final doc = kb.documents.documents[index];
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(
-                          Icons.description_outlined,
-                          color: t.accent,
-                        ),
-                        title: Text(
-                          doc.displayName,
-                          style: TextStyle(fontSize: 13, color: t.keyText),
-                        ),
-                        subtitle: Text(
-                          doc.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: t.keyTextSecondary,
-                          ),
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          tooltip: 'Document actions',
-                          icon: Icon(Icons.more_vert, size: 18, color: t.icon),
-                          onSelected: (action) async {
-                            if (action == 'unlink') {
-                              await kb.unlinkDocument(doc.id);
-                            } else {
-                              final group = await _askText(
-                                context,
-                                action == 'label'
-                                    ? 'Rename label'
-                                    : 'Move to folder',
-                                action == 'label' ? doc.label : doc.groupName,
-                              );
-                              if (group != null && group.trim().isNotEmpty) {
-                                if (action == 'label') {
-                                  await kb.documents.relabel(doc.id, group);
-                                  await kb.refreshLinkedDocuments();
-                                } else {
-                                  await kb.moveDocumentToGroup(doc.id, group);
-                                }
-                              }
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: 'label',
-                              child: Text('Rename label'),
-                            ),
-                            PopupMenuItem(
-                              value: 'group',
-                              child: Text('Move to folder'),
-                            ),
-                            PopupMenuDivider(),
-                            PopupMenuItem(
-                              value: 'unlink',
-                              child: Text('Unlink document'),
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOut,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: t.keyBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: t.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                           ],
+                        ),
+                        child: ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 3,
+                          ),
+                          leading: CircleAvatar(
+                            radius: 19,
+                            backgroundColor: t.accent.withValues(alpha: 0.14),
+                            child: Icon(
+                              Icons.description_outlined,
+                              color: t.accent,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            doc.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: t.keyText,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${doc.groupName} · ${doc.label} · Protected',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: t.keyTextSecondary,
+                            ),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            tooltip: 'Document actions',
+                            icon: Icon(
+                              Icons.more_vert,
+                              size: 18,
+                              color: t.icon,
+                            ),
+                            onSelected: (action) async {
+                              if (action == 'unlink') {
+                                await kb.unlinkDocument(doc.id);
+                              } else {
+                                final group = await _askText(
+                                  context,
+                                  action == 'label'
+                                      ? 'Rename label'
+                                      : 'Move to folder',
+                                  action == 'label' ? doc.label : doc.groupName,
+                                );
+                                if (group != null && group.trim().isNotEmpty) {
+                                  if (action == 'label') {
+                                    await kb.documents.relabel(doc.id, group);
+                                    await kb.refreshLinkedDocuments();
+                                  } else {
+                                    await kb.moveDocumentToGroup(doc.id, group);
+                                  }
+                                }
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'label',
+                                child: Text('Rename label'),
+                              ),
+                              PopupMenuItem(
+                                value: 'group',
+                                child: Text('Move to folder'),
+                              ),
+                              PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'unlink',
+                                child: Text('Unlink document'),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
