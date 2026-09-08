@@ -17,6 +17,10 @@ class KeyWidget extends StatefulWidget {
   final bool special;
   final bool active;
   final int flex;
+
+  /// When false, the key uses a fixed width suitable for a horizontally
+  /// scrollable character inventory instead of participating in Row flex.
+  final bool expand;
   final double fontSize;
 
   /// Key-height multiplier driven by the Menu's Resize feature
@@ -37,6 +41,7 @@ class KeyWidget extends StatefulWidget {
     this.special = false,
     this.active = false,
     this.flex = 1,
+    this.expand = true,
     this.fontSize = 21,
     this.heightScale = 1.0,
   });
@@ -60,78 +65,78 @@ class _KeyWidgetState extends State<KeyWidget> {
         : t.keyBg;
     final fg = widget.active ? t.accentText : t.keyText;
 
-    return Expanded(
-      flex: widget.flex,
-      child: Padding(
-        padding: const EdgeInsets.all(1.5),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapUp: (_) => setState(() => _pressed = false),
-          onTapCancel: () {
-            setState(() => _pressed = false);
-            widget.onLongPressEnd?.call();
-          },
-          onTap: widget.onTap,
-          onHorizontalDragStart: widget.onHorizontalDragStart == null
-              ? null
-              : (_) => widget.onHorizontalDragStart!.call(),
-          onHorizontalDragUpdate: widget.onHorizontalDragUpdate == null
-              ? null
-              : (details) => widget.onHorizontalDragUpdate!(details.delta.dx),
-          onHorizontalDragEnd: widget.onHorizontalDragEnd == null
-              ? null
-              : (_) => widget.onHorizontalDragEnd!.call(),
-          onLongPressStart: widget.onLongPressStart == null
-              ? null
-              : (_) => widget.onLongPressStart!.call(),
-          onLongPressEnd: widget.onLongPressEnd == null
-              ? null
-              : (_) {
-                  setState(() => _pressed = false);
-                  widget.onLongPressEnd!.call();
-                },
-          child: Semantics(
-            button: true,
-            label: widget.label ?? 'Keyboard key',
-            liveRegion: false,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 60),
-              // Four rows at 55dp plus gutters fit the fixed 246dp key-area
-              // budget while preserving a comfortable touch target.
-              height: 55 * widget.heightScale,
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: _pressed
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 1,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-              ),
-              alignment: Alignment.center,
-              child: widget.icon != null
-                  ? Icon(
-                      widget.icon,
-                      size: 22,
-                      color: widget.active ? t.accentText : t.icon,
-                    )
-                  : Text(
-                      widget.label ?? '',
-                      style: TextStyle(
-                        fontSize: widget.fontSize,
-                        fontWeight: FontWeight.w500,
-                        color: fg,
+    final key = Padding(
+      padding: const EdgeInsets.all(1.5),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () {
+          setState(() => _pressed = false);
+          widget.onLongPressEnd?.call();
+        },
+        onTap: widget.onTap,
+        onHorizontalDragStart: widget.onHorizontalDragStart == null
+            ? null
+            : (_) => widget.onHorizontalDragStart!.call(),
+        onHorizontalDragUpdate: widget.onHorizontalDragUpdate == null
+            ? null
+            : (details) => widget.onHorizontalDragUpdate!(details.delta.dx),
+        onHorizontalDragEnd: widget.onHorizontalDragEnd == null
+            ? null
+            : (_) => widget.onHorizontalDragEnd!.call(),
+        onLongPressStart: widget.onLongPressStart == null
+            ? null
+            : (_) => widget.onLongPressStart!.call(),
+        onLongPressEnd: widget.onLongPressEnd == null
+            ? null
+            : (_) {
+                setState(() => _pressed = false);
+                widget.onLongPressEnd!.call();
+              },
+        child: Semantics(
+          button: true,
+          label: widget.label ?? 'Keyboard key',
+          liveRegion: false,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 60),
+            // Four rows at 55dp plus gutters fit the fixed 246dp key-area
+            // budget while preserving a comfortable touch target.
+            height: 55 * widget.heightScale,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: _pressed
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 1,
+                        offset: const Offset(0, 1),
                       ),
-                    ),
+                    ],
             ),
+            alignment: Alignment.center,
+            child: widget.icon != null
+                ? Icon(
+                    widget.icon,
+                    size: 22,
+                    color: widget.active ? t.accentText : t.icon,
+                  )
+                : Text(
+                    widget.label ?? '',
+                    style: TextStyle(
+                      fontSize: widget.fontSize,
+                      fontWeight: FontWeight.w500,
+                      color: fg,
+                    ),
+                  ),
           ),
         ),
       ),
     );
+    return widget.expand
+        ? Expanded(flex: widget.flex, child: key)
+        : SizedBox(width: 58, child: key);
   }
 }

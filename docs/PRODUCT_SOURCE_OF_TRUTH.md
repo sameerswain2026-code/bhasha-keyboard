@@ -42,7 +42,7 @@ The following status is based on repository inspection and the green CI/build va
 | Premium onboarding | Implemented | Animated ambient background, story pages, feature cards and setup transition exist |
 | Companion dashboard/demo editor | Implemented | Branded header, metrics and private canvas exist |
 | 22-language registry/layout architecture | Implemented | Verify every language with real-device language-specific QA |
-| Native language mode | Implemented in architecture | Must render the selected language’s complete character/key inventory, not an English-only alphabet substitute |
+| Native language mode | Implemented for supported script families | Complete inventories are now generated for Devanagari, Bengali/Assamese, Gujarati, Gurmukhi, Odia, Tamil, Telugu, Kannada, Malayalam, Arabic-family, Ol Chiki and Meitei; device QA is still required |
 | Roman language mode | Implemented in architecture | Keyboard remains Latin while output follows the selected language’s Roman/transliteration rules |
 | Auto mode | Implemented in architecture | User can speak/type without manually selecting the active language; detection and fallback need benchmark tests |
 | Suggestions/transliteration | Implemented | Quality, personalization and long-sentence behavior need test coverage |

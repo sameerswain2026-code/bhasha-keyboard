@@ -871,29 +871,30 @@ class _AlphaLayer extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          _ScrollableKeyRow(
             children: [
               for (final c in layout.rows[0])
                 KeyWidget(
                   label: display(c),
                   fontSize: fontSize,
+                  expand: false,
                   heightScale: scale,
                   onTap: () => _key(c),
                 ),
             ],
           ),
-          Row(
+          _ScrollableKeyRow(
+            centered: true,
             children: [
-              const Spacer(flex: 1),
               for (final c in layout.rows[1])
                 KeyWidget(
                   label: display(c),
                   fontSize: fontSize,
                   flex: 2,
+                  expand: false,
                   heightScale: scale,
                   onTap: () => _key(c),
                 ),
-              const Spacer(flex: 1),
             ],
           ),
           Row(
@@ -911,14 +912,21 @@ class _AlphaLayer extends StatelessWidget {
                   kb.tapShift();
                 },
               ),
-              for (final c in layout.rows[2])
-                KeyWidget(
-                  label: display(c),
-                  fontSize: fontSize,
-                  flex: 2,
-                  heightScale: scale,
-                  onTap: () => _key(c),
+              Expanded(
+                child: _ScrollableKeyRow(
+                  children: [
+                    for (final c in layout.rows[2])
+                      KeyWidget(
+                        label: display(c),
+                        fontSize: fontSize,
+                        flex: 2,
+                        expand: false,
+                        heightScale: scale,
+                        onTap: () => _key(c),
+                      ),
+                  ],
                 ),
+              ),
               KeyWidget(
                 icon: Icons.backspace_outlined,
                 special: true,
@@ -947,6 +955,31 @@ class _AlphaLayer extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ScrollableKeyRow extends StatelessWidget {
+  final List<Widget> children;
+  final bool centered;
+
+  const _ScrollableKeyRow({required this.children, this.centered = false});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 58,
+    child: Scrollbar(
+      thumbVisibility: children.length > 12,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: centered
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
+          children: children,
+        ),
+      ),
+    ),
+  );
 }
 
 class _GridLayer extends StatelessWidget {
