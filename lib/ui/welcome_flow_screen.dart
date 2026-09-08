@@ -192,7 +192,8 @@ class _HeroPage extends StatelessWidget {
     t: t,
     eyebrow: 'A NEW LANGUAGE OF EXPRESSION',
     title: 'Your voice.\nEvery language.',
-    body: 'A beautifully crafted keyboard for the way India speaks, thinks and connects.',
+    body:
+        'A beautifully crafted keyboard for the way India speaks, thinks and connects.',
     visual: const _HeroVisual(),
   );
 }
@@ -206,7 +207,8 @@ class _FeatureStoryPage extends StatelessWidget {
     t: t,
     eyebrow: 'MORE THAN A KEYBOARD',
     title: 'Small gestures.\nPowerful expression.',
-    body: 'Move from thought to message with an intentional toolkit designed around you.',
+    body:
+        'Move from thought to message with an intentional toolkit designed around you.',
     visual: Column(
       children: [
         _FeatureCard(
@@ -254,7 +256,8 @@ class _LaunchPage extends StatelessWidget {
     t: t,
     eyebrow: 'MADE FOR YOUR EVERYDAY',
     title: 'Make every\nmessage yours.',
-    body: 'Set up your keyboard in a minute, or explore Bhasha Aura first. You stay in control.',
+    body:
+        'Set up your keyboard in a minute, or explore Bhasha Aura first. You stay in control.',
     visual: Column(
       children: [
         SizedBox(
