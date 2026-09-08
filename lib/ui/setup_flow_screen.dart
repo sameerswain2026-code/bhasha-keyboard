@@ -141,7 +141,7 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                   ),
                   const SizedBox(height: 18),
                   Text(
-                        'Enter your Bhasha Aura',
+                    'Enter your Bhasha Aura',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
