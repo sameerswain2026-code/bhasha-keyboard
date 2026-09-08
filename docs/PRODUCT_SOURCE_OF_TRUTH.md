@@ -6,7 +6,7 @@
 **Tagline:** *Every voice, beautifully understood.*  
 **Repository:** `sameerswain2026-code/bhasha-keyboard`  
 **Document status:** Living product specification and implementation ledger  
-**Last verified code commit:** `c6474c6` (release candidate `1.0.1+2`)
+**Last verified code commit:** `35d1f17` (Flutter 3.35.2 local analyzer and 177-test validation passed; fresh CI rerun pending)
 **Primary platform:** Android Flutter application with an Android Input Method Editor (IME)  
 **Brand mark:** Gradient prism-style `भ` mark using indigo, violet, aqua and magenta
 
