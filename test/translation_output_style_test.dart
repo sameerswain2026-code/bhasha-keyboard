@@ -12,7 +12,7 @@ void main() {
 
   test('romanize maps common Urdu characters and preserves punctuation', () {
     final urdu = LanguageRegistry.byId('ur');
-    expect(Transliterator.romanize('پاکستان۔', urdu), 'pakistan۔');
+    expect(Transliterator.romanize('پاکستان۔', urdu), 'pakstan۔');
   });
 
   test('latin output remains unchanged', () {

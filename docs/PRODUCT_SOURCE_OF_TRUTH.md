@@ -6,7 +6,7 @@
 **Tagline:** *Every voice, beautifully understood.*  
 **Repository:** `sameerswain2026-code/bhasha-keyboard`  
 **Document status:** Living product specification and implementation ledger  
-**Last verified code commit:** `707a6f0`  
+**Last verified code commit:** `f34a81b` (local Romanizer smoke validation extended during the next release-candidate build)
 **Primary platform:** Android Flutter application with an Android Input Method Editor (IME)  
 **Brand mark:** Gradient prism-style `भ` mark using indigo, violet, aqua and magenta
 
@@ -48,7 +48,7 @@ The following status is based on repository inspection and the green CI/build va
 | Suggestions/transliteration | Implemented | Quality, personalization and long-sentence behavior need test coverage |
 | Voice transcription | UI/engine path present | Provider/backend secrets and 22-language accuracy validation are still required |
 | Real-time translation | UI/engine path present | Secure provider proxy and failure-state testing are required |
-| Manual translation | UI path present | Must support source/target, Native/Roman output, review, copy and insertion |
+| Manual translation | Implemented | Source/target, Native/Roman output, review, copy and insertion are present; provider-backed quality still requires device/provider validation |
 | AI writing assistant | UI/engine path present | Gemini proxy, quotas, prompt/privacy controls and output review are required |
 | Named voice assistant | Product requirement, partial implementation | Custom wake/name invocation and intent routing need implementation and safety design |
 | Real-time web assistant | Product requirement, partial implementation | Secure search provider proxy, result citations, timeouts and prompt/tool routing are required |
@@ -65,7 +65,7 @@ The following status is based on repository inspection and the green CI/build va
 | Folder-to-ZIP sharing | Product requirement, not complete | Must create a controlled temporary ZIP, show size, and support cancellation/expiry |
 | Secure API key handling | Not complete until backend is deployed | Provider keys must not be shipped in the APK |
 | Production privacy/data-safety declaration | Required release gate | Must match actual network, audio, transcript, clipboard and document behavior |
-| CI and Android builds | Green for `707a6f0` | CI, Debug APK, Production Android Build and Pages deployment passed |
+| CI and Android builds | Green for `4c3efc7`; next candidate pending external CI re-authentication | The last authenticated run passed CI, Debug APK, Production Android Build and Pages; current sandbox cannot read GitHub Actions because its GH token is invalid |
 
 ## 4. Supported language behavior contract
 

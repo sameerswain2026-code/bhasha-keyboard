@@ -269,22 +269,52 @@ class Transliterator {
     }
     if (pack.family != ScriptFamily.brahmic) return native;
 
-    final reverse = <int, String>{};
+    final consonants = <int, String>{};
     for (final entry in _consonants.entries) {
-      reverse[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
+      consonants[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
     }
+    final vowels = <int, String>{};
     for (final entry in _vowelsInd.entries) {
-      reverse[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
+      vowels[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
     }
+    final matras = <int, String>{};
     for (final entry in _matras.entries) {
-      reverse[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
+      matras[pack.scriptBase + _fold(entry.value, pack)] = entry.key;
     }
-    reverse[pack.scriptBase + _fold(_anusvara, pack)] = 'ṃ';
-    reverse[pack.scriptBase + _fold(_visarga, pack)] = 'ḥ';
-    reverse[pack.scriptBase + _fold(_candrabindu, pack)] = 'ṃ';
-    reverse[pack.scriptBase + _fold(_virama, pack)] = '';
-
-    return native.runes.map((r) => reverse[r] ?? String.fromCharCode(r)).join();
+    final anusvara = pack.scriptBase + _fold(_anusvara, pack);
+    final visarga = pack.scriptBase + _fold(_visarga, pack);
+    final candrabindu = pack.scriptBase + _fold(_candrabindu, pack);
+    final virama = pack.scriptBase + _fold(_virama, pack);
+    final runes = native.runes.toList(growable: false);
+    final out = StringBuffer();
+    for (var i = 0; i < runes.length; i++) {
+      final rune = runes[i];
+      final consonant = consonants[rune];
+      if (consonant != null) {
+        out.write(consonant);
+        final next = i + 1 < runes.length ? runes[i + 1] : null;
+        if (next == virama) {
+          i++;
+        } else if (next == null || !matras.containsKey(next)) {
+          out.write('a');
+        }
+        continue;
+      }
+      final matra = matras[rune];
+      if (matra != null) {
+        if (matra != 'a') out.write(matra);
+        continue;
+      }
+      out.write(
+        vowels[rune] ??
+            (rune == anusvara || rune == candrabindu
+                ? 'ṃ'
+                : rune == visarga
+                ? 'ḥ'
+                : String.fromCharCode(rune)),
+      );
+    }
+    return out.toString();
   }
 
   static String _mapSimple(
