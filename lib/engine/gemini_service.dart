@@ -28,7 +28,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/cloud_config.dart';
 import 'gemini_keys.dart';
+import 'appwrite_gateway_client.dart';
 import 'tavily_search_service.dart';
 
 /// Gemini's decision about how to handle a query - the "AI Router"
@@ -62,9 +64,15 @@ class GeminiDecision {
 /// misleading empty/default value - callers are expected to catch and
 /// fall back.
 class GeminiService {
-  GeminiService({GeminiKeyPool? keyPool, http.Client? client})
+  GeminiService({
+    GeminiKeyPool? keyPool,
+    http.Client? client,
+    AppwriteGatewayClient? gateway,
+  })
     : _pool = keyPool ?? GeminiKeyPool.production(),
-      _client = client ?? http.Client();
+      _client = client ?? http.Client(),
+      _gateway = gateway ??
+          (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
 
   static const String _model = 'gemini-3.1-flash-lite';
   static const String _endpoint =
@@ -77,6 +85,7 @@ class GeminiService {
 
   final GeminiKeyPool _pool;
   final http.Client _client;
+  final AppwriteGatewayClient? _gateway;
 
   /// AI Router step: ask Gemini whether it can answer [query] directly
   /// or needs live web search. Throws on any failure (network,
@@ -196,6 +205,33 @@ class GeminiService {
   /// (network, timeout, malformed body) throws immediately so a stuck
   /// request never adds noticeable latency to typing.
   Future<dynamic> _generate(String prompt, {required bool jsonMode}) async {
+    final gateway = _gateway;
+    if (gateway != null) {
+      final response = await gateway.callAi(
+        provider: 'gemini',
+        model: _model,
+        body: {
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt},
+              ],
+            },
+          ],
+          'generationConfig': {
+            if (jsonMode) 'responseMimeType': 'application/json',
+            'maxOutputTokens': 4096,
+          },
+        },
+      );
+      if (response == null) {
+        throw const StateError('Gemini gateway is not configured');
+      }
+      final text = _extractText(jsonEncode(response));
+      if (text == null) throw const FormatException('Gemini gateway: no text');
+      return jsonMode ? jsonDecode(_stripCodeFence(text)) : text;
+    }
+
     for (var attempt = 0; attempt < _pool.length; attempt++) {
       final key = _pool.current;
       final body = <String, dynamic>{

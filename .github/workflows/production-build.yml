@@ -54,6 +54,8 @@ jobs:
           --dart-define="APPWRITE_PROJECT_ID=6a7fc74a001f50afe9e5"
           --dart-define="APPWRITE_DATABASE_ID=bhasha-db"
           --dart-define="APPWRITE_DOCUMENT_LINKS_COLLECTION_ID=document-links"
+          --dart-define="APPWRITE_AI_GATEWAY_FUNCTION_ID=${{ vars.APPWRITE_AI_GATEWAY_FUNCTION_ID }}"
+          --dart-define="APPWRITE_DRIVE_GATEWAY_FUNCTION_ID=${{ vars.APPWRITE_DRIVE_GATEWAY_FUNCTION_ID }}"
 
       - name: Build signed production App Bundle
         run: >-
@@ -62,6 +64,8 @@ jobs:
           --dart-define="APPWRITE_PROJECT_ID=6a7fc74a001f50afe9e5"
           --dart-define="APPWRITE_DATABASE_ID=bhasha-db"
           --dart-define="APPWRITE_DOCUMENT_LINKS_COLLECTION_ID=document-links"
+          --dart-define="APPWRITE_AI_GATEWAY_FUNCTION_ID=${{ vars.APPWRITE_AI_GATEWAY_FUNCTION_ID }}"
+          --dart-define="APPWRITE_DRIVE_GATEWAY_FUNCTION_ID=${{ vars.APPWRITE_DRIVE_GATEWAY_FUNCTION_ID }}"
 
       - name: Verify signed outputs
         run: |

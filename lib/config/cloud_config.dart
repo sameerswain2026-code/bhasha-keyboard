@@ -19,6 +19,12 @@ class CloudConfig {
     'APPWRITE_DOCUMENT_LINKS_COLLECTION_ID',
     defaultValue: 'document-links',
   );
+  static const driveGatewayFunctionId = String.fromEnvironment(
+    'APPWRITE_DRIVE_GATEWAY_FUNCTION_ID',
+  );
+  static const aiGatewayFunctionId = String.fromEnvironment(
+    'APPWRITE_AI_GATEWAY_FUNCTION_ID',
+  );
   static const oauthSuccessUrl = String.fromEnvironment(
     'APPWRITE_OAUTH_SUCCESS_URL',
   );
@@ -28,4 +34,8 @@ class CloudConfig {
 
   static bool get databaseConfigured =>
       databaseId.isNotEmpty && documentLinksCollectionId.isNotEmpty;
+
+  static bool get aiGatewayConfigured => aiGatewayFunctionId.isNotEmpty;
+  static bool get driveGatewayConfigured => driveGatewayFunctionId.isNotEmpty;
 }
+EOF

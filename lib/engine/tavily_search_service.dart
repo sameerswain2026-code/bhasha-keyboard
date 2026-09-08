@@ -9,6 +9,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/cloud_config.dart';
+import 'appwrite_gateway_client.dart';
 import 'tavily_keys.dart';
 
 /// A single, clean web-search result: title, short summary and source
@@ -36,15 +38,22 @@ class TavilySearchResult {
 ///   exhausted) resolves to `null` rather than throwing - callers must
 ///   never crash the keyboard because of a web request.
 class TavilySearchService {
-  TavilySearchService({TavilyKeyPool? keyPool, http.Client? client})
+  TavilySearchService({
+    TavilyKeyPool? keyPool,
+    http.Client? client,
+    AppwriteGatewayClient? gateway,
+  })
     : _pool = keyPool ?? TavilyKeyPool.production(),
-      _client = client ?? http.Client();
+      _client = client ?? http.Client(),
+      _gateway = gateway ??
+          (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
 
   static const String _endpoint = 'https://api.tavily.com/search';
   static const Duration _timeout = Duration(seconds: 8);
 
   final TavilyKeyPool _pool;
   final http.Client _client;
+  final AppwriteGatewayClient? _gateway;
 
   /// Runs a single web search for [query] and returns the best result,
   /// or null if nothing useful came back / every attempt failed.
@@ -54,6 +63,20 @@ class TavilySearchService {
   Future<TavilySearchResult?> search(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return null;
+
+    final gateway = _gateway;
+    if (gateway != null) {
+      final response = await gateway.callAi(
+        provider: 'tavily',
+        body: {
+          'query': trimmed,
+          'search_depth': 'basic',
+          'max_results': 1,
+          'include_answer': false,
+        },
+      );
+      return response == null ? null : _parseResult(jsonEncode(response));
+    }
 
     for (var attempt = 0; attempt < _pool.length; attempt++) {
       final key = _pool.current;
