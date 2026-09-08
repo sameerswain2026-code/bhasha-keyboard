@@ -533,9 +533,11 @@ class SuggestionEngine {
     }
 
     // 3. Seed dictionary prefix matches.
-    final dictKey = (mode == ScriptMode.roman && !pack.isLatin && isRomanInput)
-        ? 'en'
-        : pack.id;
+    // In Roman mode an Indic user is typing transliteration, not English.
+    // Falling back to the English dictionary produced inaccurate candidates
+    // such as "the" and "with" for Hindi/Tamil prefixes. Keep suggestions
+    // language-specific; transliteration candidates above remain available.
+    final dictKey = pack.id;
     final dict = _seed[dictKey] ?? _seed['en']!;
     for (final w in dict) {
       if (results.length >= limit + 2) break;

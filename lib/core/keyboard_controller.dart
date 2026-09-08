@@ -113,6 +113,7 @@ class KeyboardController extends ChangeNotifier {
   String? get writingStatus => _writingStatus;
 
   Future<void> transformSelectedText(WritingAction action) async {
+    if (_writingBusy) return;
     final text = await hostSelectedTextReader?.call();
     if (text == null || text.trim().isEmpty) {
       _writingStatus = 'Select text first';
@@ -313,6 +314,7 @@ class KeyboardController extends ChangeNotifier {
   // ---- Feedback settings ----
   bool _hapticsEnabled = true;
   bool get hapticsEnabled => _hapticsEnabled;
+  DateTime? _lastHapticAt;
   bool _soundEnabled = false;
   bool get soundEnabled => _soundEnabled;
 
@@ -962,6 +964,7 @@ class KeyboardController extends ChangeNotifier {
     _feedback();
     if (_justCopiedText != null) dismissJustCopiedBanner();
     var text = raw;
+    _applyDetectedLanguage(text);
     if (_shift != ShiftState.off && text.length == 1) {
       text = text.toUpperCase();
       if (_shift == ShiftState.single) {
@@ -1409,6 +1412,10 @@ class KeyboardController extends ChangeNotifier {
     } else if (!pack.supportsRoman) {
       _scriptMode = ScriptMode.native;
     }
+    voice.setScriptMode(_scriptMode);
+    if (voice.isActive) {
+      unawaited(voice.stopSession(reason: 'typing-language-changed'));
+    }
     _persist('language', pack.id);
     _persist('scriptMode', _scriptMode.name);
     _updateSuggestions();
@@ -1493,17 +1500,21 @@ class KeyboardController extends ChangeNotifier {
 
   void _feedback() {
     if (_hapticsEnabled) {
+      final now = DateTime.now();
+      if (_lastHapticAt != null &&
+          now.difference(_lastHapticAt!) < const Duration(milliseconds: 22)) {
+        return;
+      }
+      _lastHapticAt = now;
       try {
         unawaited(
           _systemChannel
               .invokeMethod<void>('haptic', <String, dynamic>{
-                'durationMs': 12,
-                'amplitude': 70,
+                'durationMs': 8,
+                'amplitude': 38,
               })
               .catchError((_) {}),
         );
-        HapticFeedback.selectionClick();
-        HapticFeedback.lightImpact();
       } catch (_) {}
     }
     if (_soundEnabled) {
@@ -1662,12 +1673,31 @@ class KeyboardController extends ChangeNotifier {
 
   void _appendVoiceText(String text) {
     if (text.trim().isEmpty) return;
+    _applyDetectedLanguage(text);
     final needsSpace =
         editor.text.isNotEmpty &&
         !editor.text.endsWith(' ') &&
         !editor.text.endsWith('\n');
     _insertRaw('${needsSpace ? ' ' : ''}${text.trim()} ');
     notifyListeners();
+  }
+
+  /// Applies a detected non-Latin script to the visible keyboard. Roman
+  /// input cannot identify a spoken language reliably, so it remains under
+  /// the user's selected language; native typed/voice text is a safe signal.
+  void _applyDetectedLanguage(String text) {
+    final detected = _translationEngine.detectLanguage(
+      text,
+      fallback: _language,
+    );
+    if (detected.isLatin || detected.id == _language.id) return;
+    _commitComposing();
+    _language = detected;
+    _scriptMode = ScriptMode.native;
+    voice.setScriptMode(_scriptMode);
+    _persist('language', detected.id);
+    _persist('scriptMode', _scriptMode.name);
+    _updateSuggestions();
   }
 
   /// Post-processes a finalized voice utterance for Translate mode, using
@@ -1697,11 +1727,15 @@ class KeyboardController extends ChangeNotifier {
     try {
       String english = text;
       if (!_serverSideTranslateSupported) {
-        english = _translateSource.id == 'en'
+        final detectedSource = _translationEngine.detectLanguage(
+          text,
+          fallback: _translateSource,
+        );
+        english = detectedSource.id == 'en'
             ? text
             : await _translationEngine.translate(
                     text,
-                    _translateSource,
+                    detectedSource,
                     LanguageRegistry.byId('en'),
                   ) ??
                   text;

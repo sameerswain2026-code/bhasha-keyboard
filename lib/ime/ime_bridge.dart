@@ -54,6 +54,10 @@ class ImeBridge {
         // user types at least one new character first.
         await _resyncEditorFromHost();
       case 'finishInput':
+        // Android reuses the same IME Flutter engine after the keyboard is
+        // hidden. Close any tool/clipboard/translator panel here so the next
+        // opening always starts on the keyboard, not the previous panel.
+        kb.resetTransientStateForNewInput();
         _resetEditor();
       case 'externalTextChanged':
         // The host's text changed by a means we did NOT initiate -

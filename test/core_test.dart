@@ -340,6 +340,31 @@ void main() {
       },
     );
 
+    test(
+      'native text auto-detects and switches the visible keyboard language',
+      () {
+        final kb = KeyboardController();
+
+        kb.insertText('न');
+
+        expect(kb.language.id, 'hi');
+        expect(kb.scriptMode, ScriptMode.native);
+        kb.dispose();
+      },
+    );
+
+    test('closing/reopening input resets tool panels to the keyboard', () {
+      final kb = KeyboardController();
+
+      kb.togglePanel(ActivePanel.clipboard);
+      expect(kb.panel, ActivePanel.clipboard);
+      kb.resetTransientStateForNewInput();
+
+      expect(kb.panel, ActivePanel.none);
+      expect(kb.panelKeyboardActive, isFalse);
+      kb.dispose();
+    });
+
     test('every language has a usable layout', () {
       for (final p in kLanguagePacks) {
         final roman = layoutFor(p, ScriptMode.roman);
