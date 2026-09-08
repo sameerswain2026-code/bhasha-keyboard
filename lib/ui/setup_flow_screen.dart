@@ -90,9 +90,14 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
       await _refreshStatus();
     } catch (error) {
       if (!mounted) return;
-      setState(
-        () => _cloudError = error.toString().replaceFirst('StateError: ', ''),
-      );
+      final raw = error.toString();
+      final message = raw.contains('project_provider_disabled')
+          ? 'Google sign-in is disabled in Appwrite. Enable Auth → Settings → '
+                'OAuth2 Providers → Google, then try again.'
+          : raw.contains('CANCELED') || raw.contains('canceled')
+          ? 'Google sign-in was canceled. Tap Connect Google again to retry.'
+          : raw.replaceFirst('StateError: ', '');
+      setState(() => _cloudError = message);
     } finally {
       if (mounted) setState(() => _cloudBusy = false);
     }

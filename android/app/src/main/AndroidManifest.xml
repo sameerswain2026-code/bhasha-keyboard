@@ -39,6 +39,19 @@
             android:exported="false"
             android:theme="@style/LaunchTheme" />
 
+        <!-- Appwrite Flutter OAuth callback. The scheme must contain the
+             exact Appwrite project ID so the browser can return to the app. -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true">
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="appwrite-callback-6a7fc74a001f50afe9e5" />
+            </intent-filter>
+        </activity>
+
         <!-- System-wide keyboard (IME) service: makes Bhasha Keyboard
              selectable in Android Settings > Languages & input and usable
              inside WhatsApp, Telegram and every other app. -->
