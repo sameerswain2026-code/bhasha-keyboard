@@ -5,15 +5,9 @@ on:
     branches:
       - feat/secure-cloud-linked-documents
   workflow_dispatch:
-    inputs:
-      publish_release:
-        description: Create a GitHub release for this build
-        required: true
-        default: false
-        type: boolean
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   JAVA_VERSION: '17'
@@ -53,31 +47,17 @@ jobs:
       - run: flutter test
 
       - name: Build signed ARM64 release APK
-        env:
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-          SARVAM_API_KEYS: ${{ secrets.SARVAM_API_KEYS }}
-          TAVILY_API_KEYS: ${{ secrets.TAVILY_API_KEYS }}
         run: >-
           flutter build apk --release --split-per-abi
           --target-platform android-arm64
-          --dart-define="GEMINI_API_KEYS=$GEMINI_API_KEYS"
-          --dart-define="SARVAM_API_KEYS=$SARVAM_API_KEYS"
-          --dart-define="TAVILY_API_KEYS=$TAVILY_API_KEYS"
           --dart-define="APPWRITE_ENDPOINT=https://nyc.cloud.appwrite.io/v1"
           --dart-define="APPWRITE_PROJECT_ID=6a7fc74a001f50afe9e5"
           --dart-define="APPWRITE_DATABASE_ID=bhasha-db"
           --dart-define="APPWRITE_DOCUMENT_LINKS_COLLECTION_ID=document-links"
 
       - name: Build signed production App Bundle
-        env:
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-          SARVAM_API_KEYS: ${{ secrets.SARVAM_API_KEYS }}
-          TAVILY_API_KEYS: ${{ secrets.TAVILY_API_KEYS }}
         run: >-
           flutter build appbundle --release
-          --dart-define="GEMINI_API_KEYS=$GEMINI_API_KEYS"
-          --dart-define="SARVAM_API_KEYS=$SARVAM_API_KEYS"
-          --dart-define="TAVILY_API_KEYS=$TAVILY_API_KEYS"
           --dart-define="APPWRITE_ENDPOINT=https://nyc.cloud.appwrite.io/v1"
           --dart-define="APPWRITE_PROJECT_ID=6a7fc74a001f50afe9e5"
           --dart-define="APPWRITE_DATABASE_ID=bhasha-db"
@@ -98,14 +78,3 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
-
-      - name: Publish GitHub release assets
-        if: ${{ inputs.publish_release == true }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: production-${{ github.run_number }}
-          name: Bhasha Keyboard Production ${{ github.run_number }}
-          generate_release_notes: true
-          files: |
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/bundle/release/app-release.aab

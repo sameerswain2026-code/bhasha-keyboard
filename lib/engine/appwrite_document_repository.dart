@@ -94,7 +94,9 @@ class AppwriteDocumentRepository {
   }
 
   Future<models.Row?> updateReference(LinkedDocument document) async {
-    if (!CloudConfig.databaseConfigured || document.remoteRowId.isEmpty) return null;
+    if (!CloudConfig.databaseConfigured || document.remoteRowId.isEmpty) {
+      return null;
+    }
     return _tables.updateRow(
       databaseId: CloudConfig.databaseId,
       tableId: CloudConfig.documentLinksCollectionId,
