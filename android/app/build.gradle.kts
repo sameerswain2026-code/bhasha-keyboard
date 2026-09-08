@@ -55,7 +55,12 @@ android {
             // Never ship a release artifact signed with the debug keystore.
             // The task guard below produces an actionable CI/local error when
             // the upload keystore has not been configured.
-            signingConfig = signingConfigs.getByName("release")
+            // Do not assign an incomplete signing config while Gradle is
+            // configuring debug variants. The release task guard below still
+            // blocks every release artifact without key.properties.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
         }
