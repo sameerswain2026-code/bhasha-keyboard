@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@googleapis/drive": "^15.0.0",
+    "google-auth-library": "^9.14.2",
+    "node-appwrite": "^14.1.0"
+  }
+}

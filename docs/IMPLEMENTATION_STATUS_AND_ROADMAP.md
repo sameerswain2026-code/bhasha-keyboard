@@ -17,7 +17,7 @@
 
 Bhasha Aura का **local keyboard core और automated release pipeline working state में हैं**। Flutter 3.35.2 के साथ `flutter analyze` में कोई issue नहीं है और पूरी automated test suite के **177 tests pass** हुए हैं। Final GitHub workflows में CI, Debug APK, Production Android Build और Pages deployment सफल हुए हैं। ARM64 production APK और Android App Bundle भी generate और checksum-verify किए गए हैं।
 
-यह स्थिति application को **local keyboard release candidate** बनाती है। इसे अभी full public cloud-connected production product नहीं कहा जा सकता, क्योंकि Google Drive, Appwrite Functions, provider proxy, real Android devices और Play Console release gates अलग से पूरे करने हैं।
+यह स्थिति application को **local keyboard release candidate** बनाती है। Repository में अब authenticated Appwrite AI/Drive gateway scaffolding और Flutter-side gateway routing भी मौजूद है; फिर भी इसे अभी full public cloud-connected production product नहीं कहा जा सकता, क्योंकि Functions deployment, Google Drive/Appwrite permissions, provider secrets, real Android devices और Play Console release gates अलग से पूरे करने हैं।
 
 ### Status legend
 
@@ -71,8 +71,8 @@ Bhasha Aura का **local keyboard core और automated release pipeline worki
 | Voice Native/Roman output | **Partial** | Script mode के अनुसार output adaptation मौजूद है; 22-language real speech accuracy validation बाकी है। |
 | Manual translation | **Complete UI path** | Source/target, Native/Roman selector, review, copy और insertion उपलब्ध हैं। Real provider quality और device test बाकी हैं। |
 | Real-time translation | **Partial** | Voice/transcription-to-translation path मौजूद है; secure provider proxy, quota, timeout और failure tests बाकी हैं। |
-| Gemini writing assistant | **Partial** | Writing/grammar/rewrite UI/engine path मौजूद है; secure backend proxy, privacy controls, quotas और review UX hardening बाकी है। |
-| Tavily/web assistant | **Partial** | Search service path मौजूद है; secure proxy, citations, timeout, rate limits और explicit tool routing बाकी है। |
+| Gemini writing assistant | **Partial** | Writing/grammar/rewrite UI/engine path और authenticated Appwrite gateway routing मौजूद है; Function deployment, provider secrets, privacy controls, quotas और review UX hardening बाकी है। |
+| Tavily/web assistant | **Partial** | Search service path और authenticated gateway routing मौजूद है; Function deployment, citations, timeout/rate-limit operations और explicit tool routing बाकी है। |
 | Named voice assistant | **Not complete** | Custom wake/name invocation, intent classification, confirmation और safety routing लागू करना बाकी है। |
 | AI output review | **Partial** | Generated result को review/copy/insert करने का design है; हर flow में original text preserve और explicit accept behavior verify करना है। |
 
@@ -84,7 +84,7 @@ Bhasha Aura का **local keyboard core और automated release pipeline worki
 | `commitContent` attachment | **Implemented** | Supported editors में rich content attachment path मौजूद है। |
 | Fallback share/picker | **Implemented** | Unsupported editors के लिए fallback path मौजूद है। |
 | Device credential protection | **Implemented locally** | Attachment से पहले device authentication और तीन failed attempts पर local 15-minute lockout मौजूद है। |
-| Appwrite metadata adapter | **Partial** | Auth/metadata client boundary मौजूद है; production collection permissions और Functions deploy करनी हैं। |
+| Appwrite metadata adapter | **Partial** | Auth/metadata client boundary मौजूद है; server-side Drive gateway scaffold भी है, पर production collection permissions, token collection और Functions deploy/test करनी हैं। |
 | Google sign-in | **Partial** | Least-privilege `drive.file` scope का client path मौजूद है; Appwrite/Google OAuth console setup और real account testing बाकी है। |
 | Google Drive dashboard | **Not complete** | Authorized folders/files, metadata, search, sort, upload और create actions का secure backend workflow बाकी है। |
 | Add to AI index | **Not complete** | Authorized metadata reference और retrieval authorization backend में बनाना बाकी है। |

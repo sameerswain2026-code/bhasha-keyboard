@@ -12,7 +12,7 @@ Bhasha Keyboard is a Flutter-based Android Input Method Editor (IME) for multili
 | Input | System-wide IME, cursor-aware editing, selection replacement, editor actions |
 | Productivity | Suggestions, clipboard panel, emoji, stickers, GIF panel, resize and theme controls |
 | Accessibility | Voice typing, text-to-speech for selected text, dark theme |
-| Integrations | Optional Gemini, Sarvam and Tavily integrations configured at build time |
+| Integrations | Optional Gemini, Sarvam and Tavily integrations through an authenticated backend gateway |
 
 ## Requirements
 
@@ -33,16 +33,17 @@ To test the actual system keyboard, install the debug build on an Android device
 
 ## Optional provider configuration
 
-Provider credentials are never committed. They are passed as Dart compile-time defines, for example:
+Provider credentials must remain in the Appwrite Functions runtime. The mobile build receives only public Appwrite values and, when deployed, the public Function IDs:
 
 ```bash
 flutter build apk --release \
-  --dart-define="GEMINI_API_KEYS=key1,key2" \
-  --dart-define="SARVAM_API_KEYS=key1,key2" \
-  --dart-define="TAVILY_API_KEYS=key1,key2"
+  --dart-define="APPWRITE_ENDPOINT=https://<project>.cloud.appwrite.io/v1" \
+  --dart-define="APPWRITE_PROJECT_ID=<project-id>" \
+  --dart-define="APPWRITE_AI_GATEWAY_FUNCTION_ID=<ai-function-id>" \
+  --dart-define="APPWRITE_DRIVE_GATEWAY_FUNCTION_ID=<drive-function-id>"
 ```
 
-For a public consumer release, use a backend proxy rather than shipping provider secrets in an APK. An empty configuration intentionally disables the corresponding provider instead of failing the application startup.
+Never pass `GEMINI_API_KEYS`, `SARVAM_API_KEYS`, `TAVILY_API_KEYS`, Google client secrets, refresh tokens, or password peppers to Flutter or Android builds. When the gateway is not configured, optional provider features remain disabled and the local keyboard continues to work.
 
 ## Release signing
 
@@ -50,7 +51,7 @@ Release signing is intentionally strict and does not fall back to the debug keys
 
 ## CI/CD
 
-GitHub Actions runs formatting checks, static analysis, unit/widget tests, and an Android debug APK build on every pull request and push. Version tags matching `v*` trigger a signed Android App Bundle build and publish the artifact to a GitHub Release. Configure signing and optional provider secrets in **Repository Settings → Secrets and variables → Actions** before creating a release tag.
+GitHub Actions runs formatting checks, static analysis, unit/widget tests, and an Android debug APK build on every pull request and push. Version tags matching `v*` trigger a signed Android App Bundle build and publish the artifact to a GitHub Release. Configure signing and the public Function IDs in the workflow; configure provider secrets only inside Appwrite Functions before creating a release tag.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [docs/releasing.md](docs/releasing.md) for the contributor and release procedures.
 
