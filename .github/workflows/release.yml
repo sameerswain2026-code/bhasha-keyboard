@@ -40,15 +40,8 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - name: Build signed Android App Bundle
-        env:
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-          SARVAM_API_KEYS: ${{ secrets.SARVAM_API_KEYS }}
-          TAVILY_API_KEYS: ${{ secrets.TAVILY_API_KEYS }}
         run: >-
           flutter build appbundle --release
-          --dart-define="GEMINI_API_KEYS=$GEMINI_API_KEYS"
-          --dart-define="SARVAM_API_KEYS=$SARVAM_API_KEYS"
-          --dart-define="TAVILY_API_KEYS=$TAVILY_API_KEYS"
           --dart-define="APPWRITE_ENDPOINT=https://nyc.cloud.appwrite.io/v1"
           --dart-define="APPWRITE_PROJECT_ID=6a7fc74a001f50afe9e5"
           --dart-define="APPWRITE_DATABASE_ID=bhasha-db"

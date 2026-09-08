@@ -2,7 +2,7 @@
 
 ## One-time GitHub setup
 
-Create an Android upload keystore and store the base64-encoded keystore in the `ANDROID_KEYSTORE_BASE64` Actions secret. Store the complete `key.properties` contents in `ANDROID_KEY_PROPERTIES`; the password must remain inside that secret and must not be duplicated in a separate repository variable. Add provider values as `GEMINI_API_KEYS`, `SARVAM_API_KEYS`, and `TAVILY_API_KEYS` only if the release is intentionally configured to use them.
+Create an Android upload keystore and store the base64-encoded keystore in the `ANDROID_KEYSTORE_BASE64` Actions secret. Store the complete `key.properties` contents in `ANDROID_KEY_PROPERTIES`; the password must remain inside that secret and must not be duplicated in a separate repository variable. **Do not pass `GEMINI_API_KEYS`, `SARVAM_API_KEYS`, or `TAVILY_API_KEYS` to a public Android build.** These credentials are recoverable from an APK. Put them in a secure backend proxy instead; the current production workflows intentionally omit them so the public release cannot leak provider credentials.
 
 ## Versioning
 
