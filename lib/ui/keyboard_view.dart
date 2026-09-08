@@ -61,7 +61,36 @@ class KeyboardView extends StatelessWidget {
       children: [
         if (!panelOpen) _Toolbar(kb: kb),
         if (panelOpen)
-          SizedBox(height: _kFullBodyHeight, child: _panelFor(kb.panel))
+          SizedBox(
+            height: _kFullBodyHeight,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              reverseDuration: const Duration(milliseconds: 120),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  ...previousChildren,
+                  if (currentChild != null) currentChild,
+                ],
+              ),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.025, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: KeyedSubtree(
+                key: ValueKey<ActivePanel>(kb.panel),
+                child: _panelFor(kb.panel),
+              ),
+            ),
+          )
         else
           SizedBox(
             height: _kBodyHeight,
