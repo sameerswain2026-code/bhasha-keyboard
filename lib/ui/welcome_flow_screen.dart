@@ -264,7 +264,21 @@ class _BottomNav extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
     child: Row(
       children: [
-        Row(children: List.generate(3, (i) => AnimatedContainer(duration: const Duration(milliseconds: 280), margin: const EdgeInsets.only(right: 6), width: i == page ? 26 : 7, height: 7, decoration: BoxDecoration(color: i == page ? t.accent : t.border, borderRadius: BorderRadius.circular(8)))),
+        Row(
+          children: List.generate(
+            3,
+            (i) => AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              margin: const EdgeInsets.only(right: 6),
+              width: i == page ? 26 : 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: i == page ? t.accent : t.border,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
         const Spacer(),
         page < 2
             ? TextButton(onPressed: onSkip, child: const Text('Skip'))
@@ -332,7 +346,36 @@ class _GlassPill extends StatelessWidget {
   final String label;
   const _GlassPill({required this.icon, required this.label});
   @override
-  Widget build(BuildContext context) => ClipRRect(borderRadius: BorderRadius.circular(20), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: .2))), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 13, color: Colors.white), const SizedBox(width: 5), Text(label, style: const TextStyle(fontSize: 9, letterSpacing: 1.2, fontWeight: FontWeight.w800, color: Colors.white))])));
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(20),
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: .2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 9,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _FeatureCard extends StatelessWidget {
