@@ -266,7 +266,12 @@ class _BottomNav extends StatelessWidget {
       children: [
         Row(children: List.generate(3, (i) => AnimatedContainer(duration: const Duration(milliseconds: 280), margin: const EdgeInsets.only(right: 6), width: i == page ? 26 : 7, height: 7, decoration: BoxDecoration(color: i == page ? t.accent : t.border, borderRadius: BorderRadius.circular(8)))),
         const Spacer(),
-        if (page < 2) TextButton(onPressed: onSkip, child: const Text('Skip')) else TextButton(onPressed: onFinish, child: const Text('Explore as guest')),
+        page < 2
+            ? TextButton(onPressed: onSkip, child: const Text('Skip'))
+            : TextButton(
+                onPressed: onFinish,
+                child: const Text('Explore as guest'),
+              ),
         const SizedBox(width: 4),
         FilledButton(onPressed: page == 2 ? onFinish : onNext, child: Text(page == 2 ? 'Open Aura' : 'Continue')),
       ],
