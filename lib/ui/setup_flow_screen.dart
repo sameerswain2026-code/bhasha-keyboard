@@ -141,7 +141,7 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Set up Bhasha Keyboard',
+                        'Enter your Bhasha Aura',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -151,7 +151,7 @@ class _SetupFlowScreenState extends State<SetupFlowScreen>
                   const SizedBox(height: 6),
                   Text(
                     'Set up typing, voice and private document sharing once. '
-                    'Your files stay in your own Google Drive.',
+                    'Your language, your rhythm, your control.',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.4,
