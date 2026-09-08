@@ -11,7 +11,6 @@ import 'package:provider/provider.dart';
 
 import '../../core/keyboard_controller.dart';
 import '../../data/languages.dart';
-import '../../engine/transliterator.dart';
 import '../kb_theme.dart';
 import 'panel_mini_keyboard.dart';
 
