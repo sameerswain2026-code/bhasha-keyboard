@@ -33,6 +33,8 @@ jobs:
           test -n "$KEY_PROPERTIES"
           echo "$KEYSTORE_B64" | base64 --decode > android/app/upload-keystore.jks
           printf '%s\n' "$KEY_PROPERTIES" > android/key.properties
+          test -s android/app/upload-keystore.jks
+          test -s android/key.properties
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
@@ -40,6 +42,22 @@ jobs:
       - name: Build signed Android App Bundle
         run: >-
           flutter build appbundle --release
+          --dart-define="APPWRITE_ENDPOINT=https://nyc.cloud.appwrite.io/v1"
+          --dart-define="APPWRITE_PROJECT_ID=6a7fc74a001f50afe9e5"
+          --dart-define="APPWRITE_DATABASE_ID=bhasha-db"
+          --dart-define="APPWRITE_DOCUMENT_LINKS_COLLECTION_ID=document-links"
+          --dart-define="APPWRITE_AI_GATEWAY_FUNCTION_ID=${{ vars.APPWRITE_AI_GATEWAY_FUNCTION_ID }}"
+          --dart-define="APPWRITE_DRIVE_GATEWAY_FUNCTION_ID=${{ vars.APPWRITE_DRIVE_GATEWAY_FUNCTION_ID }}"
+      - name: Verify signed Android App Bundle
+        run: |
+          test -s build/app/outputs/bundle/release/app-release.aab
+          ls -lh build/app/outputs/bundle/release/app-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bhasha-keyboard-${{ github.ref_name }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true

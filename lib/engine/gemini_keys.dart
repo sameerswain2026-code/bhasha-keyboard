@@ -1,8 +1,7 @@
 /// Gemini API key pool with automatic failover rotation.
 ///
-/// Keys are supplied at build time through GEMINI_API_KEYS (comma-separated
-/// dart-define values). No credential is stored in source control. For a
-/// public production app, prefer routing provider calls through a backend.
+/// Legacy local-development fallback. Public builds must leave this empty and
+/// route Gemini through the authenticated Appwrite gateway instead.
 library;
 
 class GeminiKeyPool {

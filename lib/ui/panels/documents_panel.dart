@@ -30,7 +30,14 @@ class DocumentsPanel extends StatelessWidget {
                 ),
                 Icon(Icons.cloud_outlined, size: 17, color: t.icon),
                 const SizedBox(width: 8),
-                Text('Documents', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.keyText)),
+                Text(
+                  'Documents',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: t.keyText,
+                  ),
+                ),
                 const Spacer(),
                 IconButton(
                   tooltip: 'Link document',
@@ -60,12 +67,20 @@ class DocumentsPanel extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.record_voice_over_outlined, size: 18, color: t.accent),
+                    Icon(
+                      Icons.record_voice_over_outlined,
+                      size: 18,
+                      color: t.accent,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Try: “Bhasha, upload my Aadhaar Card”. You will be asked for device PIN or biometric before sharing.',
-                        style: TextStyle(fontSize: 11, height: 1.35, color: t.keyText),
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.35,
+                          color: t.keyText,
+                        ),
                       ),
                     ),
                   ],
@@ -76,51 +91,119 @@ class DocumentsPanel extends StatelessWidget {
           if (kb.documentStatus != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-              child: Text(kb.documentStatus!, style: TextStyle(fontSize: 11, color: t.accent)),
+              child: Text(
+                kb.documentStatus!,
+                style: TextStyle(fontSize: 11, color: t.accent),
+              ),
             ),
           Expanded(
             child: kb.documents.documents.isEmpty
                 ? Center(
-                    child: Text('No linked documents yet.\nTap + to choose from Google Drive or storage.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: t.keyTextSecondary)),
+                    child: Text(
+                      'No linked documents yet.\nTap + to choose from Google Drive or storage.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: t.keyTextSecondary),
+                    ),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     itemCount: kb.documents.documents.length,
                     itemBuilder: (_, index) {
                       final doc = kb.documents.documents[index];
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(Icons.description_outlined, color: t.accent),
-                        title: Text(doc.displayName, style: TextStyle(fontSize: 13, color: t.keyText)),
-                        subtitle: Text(doc.label, style: TextStyle(fontSize: 11, color: t.keyTextSecondary)),
-                        trailing: PopupMenuButton<String>(
-                          tooltip: 'Document actions',
-                          icon: Icon(Icons.more_vert, size: 18, color: t.icon),
-                          onSelected: (action) async {
-                            if (action == 'unlink') {
-                              await kb.unlinkDocument(doc.id);
-                            } else {
-                              final group = await _askText(
-                                context,
-                                action == 'label' ? 'Rename label' : 'Move to folder',
-                                action == 'label' ? doc.label : doc.groupName,
-                              );
-                              if (group != null && group.trim().isNotEmpty) {
-                                if (action == 'label') {
-                                  await kb.documents.relabel(doc.id, group);
-                                  await kb.refreshLinkedDocuments();
-                                } else {
-                                  await kb.moveDocumentToGroup(doc.id, group);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOut,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: t.keyBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: t.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 3,
+                          ),
+                          leading: CircleAvatar(
+                            radius: 19,
+                            backgroundColor: t.accent.withValues(alpha: 0.14),
+                            child: Icon(
+                              Icons.description_outlined,
+                              color: t.accent,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            doc.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: t.keyText,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${doc.groupName} · ${doc.label} · Protected',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: t.keyTextSecondary,
+                            ),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            tooltip: 'Document actions',
+                            icon: Icon(
+                              Icons.more_vert,
+                              size: 18,
+                              color: t.icon,
+                            ),
+                            onSelected: (action) async {
+                              if (action == 'unlink') {
+                                await kb.unlinkDocument(doc.id);
+                              } else {
+                                final group = await _askText(
+                                  context,
+                                  action == 'label'
+                                      ? 'Rename label'
+                                      : 'Move to folder',
+                                  action == 'label' ? doc.label : doc.groupName,
+                                );
+                                if (group != null && group.trim().isNotEmpty) {
+                                  if (action == 'label') {
+                                    await kb.documents.relabel(doc.id, group);
+                                    await kb.refreshLinkedDocuments();
+                                  } else {
+                                    await kb.moveDocumentToGroup(doc.id, group);
+                                  }
                                 }
                               }
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'label', child: Text('Rename label')),
-                            PopupMenuItem(value: 'group', child: Text('Move to folder')),
-                            PopupMenuDivider(),
-                            PopupMenuItem(value: 'unlink', child: Text('Unlink document')),
-                          ],
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'label',
+                                child: Text('Rename label'),
+                              ),
+                              PopupMenuItem(
+                                value: 'group',
+                                child: Text('Move to folder'),
+                              ),
+                              PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'unlink',
+                                child: Text('Unlink document'),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -160,8 +243,14 @@ class DocumentsPanel extends StatelessWidget {
         title: Text(title),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -178,20 +267,39 @@ class _DocumentDetailsDialogState extends State<_DocumentDetailsDialog> {
   final _label = TextEditingController(text: 'General');
   final _folder = TextEditingController(text: 'General');
   @override
-  void dispose() { _label.dispose(); _folder.dispose(); super.dispose(); }
+  void dispose() {
+    _label.dispose();
+    _folder.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Link a document'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _label, decoration: const InputDecoration(labelText: 'Label (e.g. Aadhaar)')),
-            TextField(controller: _folder, decoration: const InputDecoration(labelText: 'Folder (e.g. Identity)')),
-          ],
+    title: const Text('Link a document'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _label,
+          decoration: const InputDecoration(labelText: 'Label (e.g. Aadhaar)'),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, [_label.text, _folder.text]), child: const Text('Choose file')),
-        ],
-      );
+        TextField(
+          controller: _folder,
+          decoration: const InputDecoration(
+            labelText: 'Folder (e.g. Identity)',
+          ),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context, [_label.text, _folder.text]),
+        child: const Text('Choose file'),
+      ),
+    ],
+  );
 }

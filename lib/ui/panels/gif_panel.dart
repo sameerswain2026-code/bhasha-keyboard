@@ -57,7 +57,11 @@ class _GifPanelState extends State<GifPanel> {
     kb.closePanel();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('GIF link inserted; this app does not accept GIF content.')),
+        const SnackBar(
+          content: Text(
+            'GIF link inserted; this app does not accept GIF content.',
+          ),
+        ),
       );
     }
   }

@@ -122,6 +122,153 @@ const Map<String, LayoutRows> kNativeLayouts = {
     ['ꯊ', 'ꯋ', 'ꯌ', 'ꯍ', 'ꯎ', 'ꯏ', 'ꯐ', 'ꯑ', 'ꯒ'],
     ['ꯓ', 'ꯔ', 'ꯕ', 'ꯖ', 'ꯗ', 'ꯘ', 'ꯙ'],
   ]),
+  // These languages use the Devanagari script but previously fell through
+  // to a generic fallback, which made their native keyboard appear
+  // incomplete and indistinguishable from an unrelated language.
+  'mai': LayoutRows([
+    ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ'],
+    ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ'],
+    [
+      'ट',
+      'ठ',
+      'ड',
+      'ढ',
+      'ण',
+      'त',
+      'थ',
+      'द',
+      'ध',
+      'न',
+      'प',
+      'फ',
+      'ब',
+      'भ',
+      'म',
+      'य',
+      'र',
+      'ल',
+      'व',
+      'श',
+      'ष',
+      'स',
+      'ह',
+      'ं',
+      'ः',
+      'ँ',
+      '्',
+      '़',
+      '।',
+      '॥',
+    ],
+  ]),
+  'kok': LayoutRows([
+    ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ'],
+    ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ'],
+    [
+      'ट',
+      'ठ',
+      'ड',
+      'ढ',
+      'ण',
+      'त',
+      'थ',
+      'द',
+      'ध',
+      'न',
+      'प',
+      'फ',
+      'ब',
+      'भ',
+      'म',
+      'य',
+      'र',
+      'ल',
+      'व',
+      'श',
+      'ष',
+      'स',
+      'ह',
+      'ं',
+      'ः',
+      'ँ',
+      '्',
+      '़',
+      '।',
+      '॥',
+    ],
+  ]),
+  'doi': LayoutRows([
+    ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ'],
+    ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ'],
+    [
+      'ट',
+      'ठ',
+      'ड',
+      'ढ',
+      'ण',
+      'त',
+      'थ',
+      'द',
+      'ध',
+      'न',
+      'प',
+      'फ',
+      'ब',
+      'भ',
+      'म',
+      'य',
+      'र',
+      'ल',
+      'व',
+      'श',
+      'ष',
+      'स',
+      'ह',
+      'ं',
+      'ः',
+      'ँ',
+      '्',
+      '़',
+      '।',
+      '॥',
+    ],
+  ]),
+  'brx': LayoutRows([
+    ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ'],
+    ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ'],
+    [
+      'ट',
+      'ठ',
+      'ड',
+      'ढ',
+      'ण',
+      'त',
+      'थ',
+      'द',
+      'ध',
+      'न',
+      'प',
+      'फ',
+      'ब',
+      'भ',
+      'म',
+      'य',
+      'र',
+      'ल',
+      'व',
+      'श',
+      'ष',
+      'स',
+      'ह',
+      'ं',
+      'ः',
+      'ँ',
+      '्',
+      '़',
+      '।',
+      '॥',
+    ],
+  ]),
 };
 
 /// Devanagari-based fallback for languages without a dedicated layout.
@@ -131,7 +278,55 @@ const LayoutRows kDevanagariFallback = LayoutRows([
   ['ं', 'म', 'न', 'व', 'ल', 'स', 'य'],
 ]);
 
+/// Complete practical character inventories used by Native mode.
+///
+/// The compact InScript-style layouts above remain useful as a familiar
+/// first row arrangement, but Native mode must not silently hide the rest of
+/// a script. The keyboard renders these rows horizontally, so every listed
+/// character remains reachable without shrinking keys below a usable size.
+const Map<String, String> kCompleteNativeInventories = {
+  'hi':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
+  'mr':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
+  'ne':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
+  'sa':
+      'अआइईउऊऋॠऌॡएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृॄेैोौ।॥',
+  'bn': 'অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎংঃঁ়্ািীুূৃেৈোৌ।॥',
+  'as': 'অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযৰলশষসহড়ঢ়য়ৎংঃঁ়্ািীুূৃেৈোৌ।॥',
+  'gu': 'અઆઇઈઉઊઋએઐઓઔકખગઘઙચછજઝઞટઠડઢણતથદધનપફબભમયરલવશષસહળક્ષજ્ઞંઃઁ્ાિીુૂૃેૈોૌ।',
+  'pa': 'ਅਆਇਈਉਊਏਐਓਔਕਖਗਘਙਚਛਜਝਞਟਠਡਢਣਤਥਦਧਨਪਫਬਭਮਯਰਲਵਸ਼ਸਹੜ੍ਹ਼੍ਾਂਿੀੁੂੇੈੋੌ।',
+  'or': 'ଅଆଇଈଉଊଋଏଐଓଔକଖଗଘଙଚଛଜଝଞଟଠଡଢଣତଥଦଧନପଫବଭମଯରଲଳଶଷସହକ୍ଷଜ୍ଞଂଃଁ୍ାିୀୁୂୃେୈୋୌ।॥',
+  'ta': 'அஆஇஈஉஊஎஏஐஒஓஔகஙசஜஞடணதநனபமயரறலளழவஷஸஹ்ாிீுூெேைொோௌஂஃ।',
+  'te':
+      'అఆఇఈఉఊఋఎఏఐఒఓఔకఖగఘఙచఛజఝఞటఠడఢణతథదధనపఫబభమయరఱలళవశషసహళ్క్షజ్ఞం:ఃఁ్ాిీుూృెేైొోౌ।',
+  'kn': 'ಅಆಇಈಉಊಋಎಏಐಒಓಔಕಖಗಘಙಚಛಜಝಞಟಠಡಢಣತಥದಧನಪಫಬಭಮಯರಱಲಳವಶಷಸಹ್ ಾಿೀುೂೃೆೇೈೊೋೌಂಃ।',
+  'ml': 'അആഇഈഉഊഋഎഏഐഒഓഔകഖഗഘങചഛജഝഞടഠഡഢണതഥദധനപഫബഭമയരറലളഴവശഷസഹ് ാിീുൂൃെേൈൊോൌംഃ।',
+  'ur': 'ابتثجحخدڈذرڑزژسشصضطظعغفقکگلمنوہیےںھءآأؤئَُِ۔پٹ',
+  'ks': 'ابتثجحخدڈذرڑزژسشصضطظعغفقکگلمنوہیےںھءآأؤئَُِ۔پٹ',
+  'sd': 'ابتثجحخدڊذرڙزژسشصضطظعغفقڪگلمنوهِيےںھءآأؤئَُِ۔',
+  'sat': 'ᱚᱛᱜᱝᱞᱟᱠᱡᱢᱣᱤᱥᱦᱧᱨᱩᱪᱫᱬᱮᱯᱰᱱᱲᱳᱴᱵᱶᱷᱸᱹᱺᱻᱼᱽ᱾᱿᳀',
+  'mni': 'ꯀꯁꯂꯃꯄꯅꯆꯇꯈꯉꯊꯋꯌꯍꯎꯏꯐꯑꯒꯓꯔꯕꯖꯗꯘꯙꯚꯛꯜꯝꯞꯟꯠꯡꯢꯣꯤꯥꯦꯧꯨꯩꯪ꯫',
+};
+
+LayoutRows _completeInventory(String inventory) {
+  final characters = inventory.runes
+      .map(String.fromCharCode)
+      .where((character) => character.trim().isNotEmpty)
+      .toSet()
+      .toList(growable: false);
+  final rowSize = (characters.length / 3).ceil();
+  return LayoutRows([
+    characters.take(rowSize).toList(),
+    characters.skip(rowSize).take(rowSize).toList(),
+    characters.skip(rowSize * 2).toList(),
+  ]);
+}
+
 LayoutRows layoutFor(LanguagePack pack, ScriptMode mode) {
   if (pack.isLatin || mode == ScriptMode.roman) return kQwerty;
+  final complete = kCompleteNativeInventories[pack.id];
+  if (complete != null) return _completeInventory(complete);
   return kNativeLayouts[pack.id] ?? kDevanagariFallback;
 }

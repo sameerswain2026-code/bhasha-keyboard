@@ -13,7 +13,7 @@ import 'document_manager.dart';
 
 class AppwriteDocumentRepository {
   AppwriteDocumentRepository({Client? client})
-      : _client = client ?? _newClient() {
+    : _client = client ?? _newClient() {
     _account = Account(_client);
     _tables = TablesDB(_client);
   }

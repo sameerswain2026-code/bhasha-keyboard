@@ -6,8 +6,8 @@
 /// failed the pool resets (credits/limits may recover) so the app never
 /// gets permanently stuck.
 ///
-/// Keys are supplied at build time through SARVAM_API_KEYS. No credential is
-/// stored in source control. For a public production app, prefer a backend.
+/// Legacy local-development fallback. Public builds must leave this empty and
+/// route Sarvam through the authenticated Appwrite gateway instead.
 library;
 
 class SarvamKeyPool {

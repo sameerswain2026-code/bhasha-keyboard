@@ -77,6 +77,10 @@ class SarvamSpeechProvider implements SpeechProvider {
   Future<bool> initialize(LanguagePack pack) async {
     _pack = pack;
     _reconnectAttempts = 0;
+    // A public APK must not contain Sarvam credentials. Until the secure
+    // streaming proxy is configured, fail before entering LISTENING instead
+    // of showing a microphone state that can never produce a transcript.
+    if (_pool.current.isEmpty) return false;
     // Fail fast with a clean state if the mic permission is missing.
     try {
       return await micSource.hasPermission();

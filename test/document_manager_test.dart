@@ -5,7 +5,10 @@ void main() {
   group('Secure Cloud-Linked Document Management', () {
     test('detects supported upload commands', () {
       expect(DocumentCommand.parse('Upload my resume')?.label, 'Resume');
-      expect(DocumentCommand.parse('please attach my education')?.label, 'Education');
+      expect(
+        DocumentCommand.parse('please attach my education')?.label,
+        'Education',
+      );
       expect(DocumentCommand.parse('send my CV')?.label, 'Resume');
     });
 
@@ -24,7 +27,17 @@ void main() {
         linkedAt: DateTime.utc(2026, 1, 1),
       );
       final json = doc.toJson();
-      expect(json.keys, containsAll(<String>{'id', 'label', 'displayName', 'uri', 'mimeType', 'linkedAt'}));
+      expect(
+        json.keys,
+        containsAll(<String>{
+          'id',
+          'label',
+          'displayName',
+          'uri',
+          'mimeType',
+          'linkedAt',
+        }),
+      );
       expect(json.keys, isNot(contains('bytes')));
       expect(LinkedDocument.fromJson(json).uri, doc.uri);
     });

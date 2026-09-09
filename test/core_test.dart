@@ -85,6 +85,18 @@ void main() {
       kb.dispose();
     });
 
+    test('new input resets panels, layer, and shift to keyboard defaults', () {
+      final kb = KeyboardController();
+      kb.setLayer(KeyboardLayer.symbols);
+      kb.togglePanel(ActivePanel.settings);
+      kb.tapShift();
+      kb.resetTransientStateForNewInput();
+      expect(kb.layer, KeyboardLayer.alpha);
+      expect(kb.panel, ActivePanel.none);
+      expect(kb.shift, ShiftState.off);
+      kb.dispose();
+    });
+
     test('numeric layout data contains digits and rupee', () {
       expect(kNumeric.rows[0], containsAll(['1', '5', '0']));
       expect(kNumeric.rows[1], contains('₹'));
@@ -282,6 +294,74 @@ void main() {
       kb.setLanguage(LanguageRegistry.byId('hi'));
       kb.setScriptMode(ScriptMode.native);
       expect(kb.scriptMode, ScriptMode.native);
+      kb.dispose();
+    });
+
+    test(
+      'native transcribe selection switches the visible keyboard alphabet',
+      () {
+        final kb = KeyboardController();
+        final hindi = LanguageRegistry.byId('hi');
+
+        kb.setTranscribeConfig(hindi, ScriptMode.native);
+
+        expect(kb.transcribeLanguage.id, 'hi');
+        expect(kb.language.id, 'hi');
+        expect(kb.scriptMode, ScriptMode.native);
+        kb.dispose();
+      },
+    );
+
+    test(
+      'every selectable Indian language can use native transcribe output',
+      () {
+        final kb = KeyboardController();
+        for (final language in kLanguagePacks.where((p) => p.id != 'en')) {
+          kb.setTranscribeConfig(language, ScriptMode.native);
+          expect(kb.language.id, language.id);
+          expect(kb.scriptMode, ScriptMode.native);
+        }
+        kb.dispose();
+      },
+    );
+
+    test(
+      'manual translation returns an explicit result without editing host text',
+      () async {
+        final kb = KeyboardController();
+        final result = await kb.translateManualText(
+          'hello',
+          LanguageRegistry.byId('en'),
+          LanguageRegistry.byId('hi'),
+        );
+        expect(result, 'नमस्ते');
+        expect(kb.editor.text, isEmpty);
+        kb.dispose();
+      },
+    );
+
+    test(
+      'native text auto-detects and switches the visible keyboard language',
+      () {
+        final kb = KeyboardController();
+
+        kb.insertText('न');
+
+        expect(kb.language.id, 'hi');
+        expect(kb.scriptMode, ScriptMode.native);
+        kb.dispose();
+      },
+    );
+
+    test('closing/reopening input resets tool panels to the keyboard', () {
+      final kb = KeyboardController();
+
+      kb.togglePanel(ActivePanel.clipboard);
+      expect(kb.panel, ActivePanel.clipboard);
+      kb.resetTransientStateForNewInput();
+
+      expect(kb.panel, ActivePanel.none);
+      expect(kb.panelKeyboardActive, isFalse);
       kb.dispose();
     });
 

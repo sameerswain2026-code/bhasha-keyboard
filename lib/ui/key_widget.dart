@@ -17,6 +17,10 @@ class KeyWidget extends StatefulWidget {
   final bool special;
   final bool active;
   final int flex;
+
+  /// When false, the key uses a fixed width suitable for a horizontally
+  /// scrollable character inventory instead of participating in Row flex.
+  final bool expand;
   final double fontSize;
 
   /// Key-height multiplier driven by the Menu's Resize feature
@@ -37,6 +41,7 @@ class KeyWidget extends StatefulWidget {
     this.special = false,
     this.active = false,
     this.flex = 1,
+    this.expand = true,
     this.fontSize = 21,
     this.heightScale = 1.0,
   });
@@ -60,54 +65,44 @@ class _KeyWidgetState extends State<KeyWidget> {
         : t.keyBg;
     final fg = widget.active ? t.accentText : t.keyText;
 
-    return Expanded(
-      flex: widget.flex,
-      child: Padding(
-        padding: const EdgeInsets.all(2.5),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapUp: (_) => setState(() => _pressed = false),
-          onTapCancel: () {
-            setState(() => _pressed = false);
-            widget.onLongPressEnd?.call();
-          },
-          onTap: widget.onTap,
-          onHorizontalDragStart: widget.onHorizontalDragStart == null
-              ? null
-              : (_) => widget.onHorizontalDragStart!.call(),
-          onHorizontalDragUpdate: widget.onHorizontalDragUpdate == null
-              ? null
-              : (details) => widget.onHorizontalDragUpdate!(details.delta.dx),
-          onHorizontalDragEnd: widget.onHorizontalDragEnd == null
-              ? null
-              : (_) => widget.onHorizontalDragEnd!.call(),
-          onLongPressStart: widget.onLongPressStart == null
-              ? null
-              : (_) {
-                  widget.onLongPressStart!.call();
-                },
-          onLongPressEnd: widget.onLongPressEnd == null
-              ? null
-              : (_) {
-                  setState(() => _pressed = false);
-                  widget.onLongPressEnd!.call();
-                },
+    final key = Padding(
+      padding: const EdgeInsets.all(1.5),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () {
+          setState(() => _pressed = false);
+          widget.onLongPressEnd?.call();
+        },
+        onTap: widget.onTap,
+        onHorizontalDragStart: widget.onHorizontalDragStart == null
+            ? null
+            : (_) => widget.onHorizontalDragStart!.call(),
+        onHorizontalDragUpdate: widget.onHorizontalDragUpdate == null
+            ? null
+            : (details) => widget.onHorizontalDragUpdate!(details.delta.dx),
+        onHorizontalDragEnd: widget.onHorizontalDragEnd == null
+            ? null
+            : (_) => widget.onHorizontalDragEnd!.call(),
+        onLongPressStart: widget.onLongPressStart == null
+            ? null
+            : (_) => widget.onLongPressStart!.call(),
+        onLongPressEnd: widget.onLongPressEnd == null
+            ? null
+            : (_) {
+                setState(() => _pressed = false);
+                widget.onLongPressEnd!.call();
+              },
+        child: Semantics(
+          button: true,
+          label: widget.label ?? 'Keyboard key',
+          liveRegion: false,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 60),
-            // Base height raised from 46 -> 54: the standalone language
-            // sub-bar row beneath the toolbar was removed (spec item 2),
-            // and that reclaimed vertical space is redistributed into
-            // the keys themselves rather than left empty, while the
-            // overall keyboard container height budget stays identical
-            // (see `_kBodyHeight`/`_kFullBodyHeight` in keyboard_view.dart).
-            //
-            // Budget check (4 key rows, each wrapped in EdgeInsets.all(2.5)
-            // padding, inside an outer Padding.fromLTRB(2,2,2,4)):
-            //   4 * (54 + 5) + 6 = 242, which fits within the 246dp
-            //   `_kBodyHeight` budget with a few dp of margin to spare.
-            //   (56 was tried first and overflowed by ~4dp - see history.)
-            height: 54 * widget.heightScale,
+            // Four rows at 55dp plus gutters fit the fixed 246dp key-area
+            // budget while preserving a comfortable touch target.
+            height: 55 * widget.heightScale,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(8),
@@ -140,5 +135,8 @@ class _KeyWidgetState extends State<KeyWidget> {
         ),
       ),
     );
+    return widget.expand
+        ? Expanded(flex: widget.flex, child: key)
+        : SizedBox(width: 58, child: key);
   }
 }

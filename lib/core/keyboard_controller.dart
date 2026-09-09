@@ -36,6 +36,7 @@ enum ActivePanel {
   textEditing,
   resize,
   translateConfig, // Translate Configuration Page (source/target/style + Save)
+  manualTranslate, // Explicit text input translation tool
   transcribeLang, // Mic-side language selector for Transcribe mode
   clipboard,
   language, // Keyboard TYPING language (independent of mic), via long-press
@@ -112,6 +113,7 @@ class KeyboardController extends ChangeNotifier {
   String? get writingStatus => _writingStatus;
 
   Future<void> transformSelectedText(WritingAction action) async {
+    if (_writingBusy) return;
     final text = await hostSelectedTextReader?.call();
     if (text == null || text.trim().isEmpty) {
       _writingStatus = 'Select text first';
@@ -192,7 +194,8 @@ class KeyboardController extends ChangeNotifier {
     await documents.load();
     final document = documents.findByLabel(command.label);
     if (document == null) {
-      _documentStatus = 'No linked ${command.label} document. Link it from Tools → Documents.';
+      _documentStatus =
+          'No linked ${command.label} document. Link it from Tools → Documents.';
       notifyListeners();
       return;
     }
@@ -311,6 +314,7 @@ class KeyboardController extends ChangeNotifier {
   // ---- Feedback settings ----
   bool _hapticsEnabled = true;
   bool get hapticsEnabled => _hapticsEnabled;
+  DateTime? _lastHapticAt;
   bool _soundEnabled = false;
   bool get soundEnabled => _soundEnabled;
 
@@ -348,13 +352,15 @@ class KeyboardController extends ChangeNotifier {
   Future<String?> Function()? hostSelectedTextReader;
   Future<void> Function(String text)? hostSelectionReplacer;
   Future<void> Function(String text, String locale)? hostTextSpeaker;
+
   /// Commits image/GIF bytes to the active host app when it supports
   /// Android rich content. The bytes are transient and never persisted.
   Future<bool> Function({
     required Uint8List bytes,
     required String mimeType,
     required String description,
-  })? hostMediaCommitter;
+  })?
+  hostMediaCommitter;
   Future<void> Function(double scale)? hostKeyboardScaleSetter;
 
   Future<bool> insertMedia({
@@ -366,7 +372,9 @@ class KeyboardController extends ChangeNotifier {
     if (committer == null) return false;
     _feedback();
     final committed = await committer(
-      bytes: bytes, mimeType: mimeType, description: description,
+      bytes: bytes,
+      mimeType: mimeType,
+      description: description,
     );
     if (committed) {
       closePanel();
@@ -393,9 +401,9 @@ class KeyboardController extends ChangeNotifier {
   final TranslationEngine _translationEngine = TranslationEngine();
 
   // ---- Transcribe mode config (Method: mic-side Language Selector) ----
-  // Independent of the general typing [_language] - the mic's Transcribe
-  // recognition language defaults to Odia regardless of what script the
-  // user is currently typing in.
+  // The selected transcribe language and output script also drive the visible
+  // alphabet keyboard, avoiding an English QWERTY keyboard after choosing a
+  // native-language transcription mode.
   LanguagePack _transcribeLanguage = LanguageRegistry.byId('or');
   LanguagePack get transcribeLanguage => _transcribeLanguage;
   ScriptMode _transcribeStyle = ScriptMode.roman;
@@ -411,6 +419,12 @@ class KeyboardController extends ChangeNotifier {
       style = ScriptMode.native;
     }
     _transcribeStyle = style;
+    _commitComposing();
+    _language = lang;
+    _scriptMode = style;
+    voice.setScriptMode(style);
+    _persist('language', lang.id);
+    _persist('scriptMode', style.name);
     _persist('transcribeLang', lang.id);
     _persist('transcribeStyle', style.name);
     // Language-code changes require a fresh recognizer session.
@@ -486,13 +500,17 @@ class KeyboardController extends ChangeNotifier {
     _persist('translateTarget', _translateTarget.id);
     _persist('translateStyle', _translateOutputStyle.name);
     _persist('translateEverActivated', true);
-    // Translation output is also the user's next typing context. This keeps
-    // the live keycaps aligned with the selected target: English -> Odia,
-    // Telugu -> Odia, and Odia -> Telugu all show the target script rather
-    // than falling back to generic A-B-C keycaps.
-    setLanguage(_translateTarget);
+    // Roman Translate output always uses English keycaps. The target remains
+    // part of the translation configuration, but must not switch the visible
+    // keyboard to a native target script in Roman mode.
+    final visibleLanguage = _translateOutputStyle == ScriptMode.roman
+        ? LanguageRegistry.byId('en')
+        : _translateTarget;
+    setLanguage(visibleLanguage);
     setScriptMode(
-      _translateTarget.isLatin ? ScriptMode.roman : ScriptMode.native,
+      _translateOutputStyle == ScriptMode.native && !_translateTarget.isLatin
+          ? ScriptMode.native
+          : ScriptMode.roman,
     );
     setMicMode(MicMode.translate);
     closePanel();
@@ -950,6 +968,7 @@ class KeyboardController extends ChangeNotifier {
     _feedback();
     if (_justCopiedText != null) dismissJustCopiedBanner();
     var text = raw;
+    _applyDetectedLanguage(text);
     if (_shift != ShiftState.off && text.length == 1) {
       text = text.toUpperCase();
       if (_shift == ShiftState.single) {
@@ -1397,6 +1416,10 @@ class KeyboardController extends ChangeNotifier {
     } else if (!pack.supportsRoman) {
       _scriptMode = ScriptMode.native;
     }
+    voice.setScriptMode(_scriptMode);
+    if (voice.isActive) {
+      unawaited(voice.stopSession(reason: 'typing-language-changed'));
+    }
     _persist('language', pack.id);
     _persist('scriptMode', _scriptMode.name);
     _updateSuggestions();
@@ -1443,6 +1466,20 @@ class KeyboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears transient state when Android reuses the IME engine for a newly
+  /// focused app or text field.
+  void resetTransientStateForNewInput() {
+    if (voice.isActive) voice.cancelForKeyPress();
+    _aiCapture.cancel();
+    _aiThinking = false;
+    _panel = ActivePanel.none;
+    _panelKeyboardActive = false;
+    _panelInputText = '';
+    _layer = KeyboardLayer.alpha;
+    _shift = ShiftState.off;
+    notifyListeners();
+  }
+
   // =====================================================================
   // Theme & feedback settings
   // =====================================================================
@@ -1467,15 +1504,21 @@ class KeyboardController extends ChangeNotifier {
 
   void _feedback() {
     if (_hapticsEnabled) {
+      final now = DateTime.now();
+      if (_lastHapticAt != null &&
+          now.difference(_lastHapticAt!) < const Duration(milliseconds: 22)) {
+        return;
+      }
+      _lastHapticAt = now;
       try {
         unawaited(
-          _systemChannel.invokeMethod<void>('haptic', <String, dynamic>{
-            'durationMs': 12,
-            'amplitude': 70,
-          }).catchError((_) {}),
+          _systemChannel
+              .invokeMethod<void>('haptic', <String, dynamic>{
+                'durationMs': 8,
+                'amplitude': 38,
+              })
+              .catchError((_) {}),
         );
-        HapticFeedback.selectionClick();
-        HapticFeedback.lightImpact();
       } catch (_) {}
     }
     if (_soundEnabled) {
@@ -1634,12 +1677,31 @@ class KeyboardController extends ChangeNotifier {
 
   void _appendVoiceText(String text) {
     if (text.trim().isEmpty) return;
+    _applyDetectedLanguage(text);
     final needsSpace =
         editor.text.isNotEmpty &&
         !editor.text.endsWith(' ') &&
         !editor.text.endsWith('\n');
     _insertRaw('${needsSpace ? ' ' : ''}${text.trim()} ');
     notifyListeners();
+  }
+
+  /// Applies a detected non-Latin script to the visible keyboard. Roman
+  /// input cannot identify a spoken language reliably, so it remains under
+  /// the user's selected language; native typed/voice text is a safe signal.
+  void _applyDetectedLanguage(String text) {
+    final detected = _translationEngine.detectLanguage(
+      text,
+      fallback: _language,
+    );
+    if (detected.isLatin || detected.id == _language.id) return;
+    _commitComposing();
+    _language = detected;
+    _scriptMode = ScriptMode.native;
+    voice.setScriptMode(_scriptMode);
+    _persist('language', detected.id);
+    _persist('scriptMode', _scriptMode.name);
+    _updateSuggestions();
   }
 
   /// Post-processes a finalized voice utterance for Translate mode, using
@@ -1669,16 +1731,22 @@ class KeyboardController extends ChangeNotifier {
     try {
       String english = text;
       if (!_serverSideTranslateSupported) {
-        english = _translateSource.id == 'en'
+        final detectedSource = _translationEngine.detectLanguage(
+          text,
+          fallback: _translateSource,
+        );
+        english = detectedSource.id == 'en'
             ? text
             : await _translationEngine.translate(
                     text,
-                    _translateSource,
+                    detectedSource,
                     LanguageRegistry.byId('en'),
                   ) ??
                   text;
       }
-      if (_translateTarget.id == 'en') {
+      // Roman output deliberately stays in English letters for every target.
+      if (_translateOutputStyle == ScriptMode.roman ||
+          _translateTarget.id == 'en') {
         return english;
       }
       // Pivot English -> target (native-script result; see limitation
@@ -1733,6 +1801,30 @@ class KeyboardController extends ChangeNotifier {
   /// keyboard language.
   Future<void> translateSelectedText() =>
       translateSelectedTextTo(_language, speak: false);
+
+  /// Translates text entered explicitly in the keyboard's manual translation
+  /// tool. Unlike selection translation, this never mutates the host editor;
+  /// the panel displays the result and lets the user copy or insert it.
+  Future<String?> translateManualText(
+    String text,
+    LanguagePack source,
+    LanguagePack target, {
+    ScriptMode outputStyle = ScriptMode.native,
+  }) async {
+    final input = text.trim();
+    if (input.isEmpty) return null;
+    if (source.id == target.id) {
+      return outputStyle == ScriptMode.roman
+          ? Transliterator.romanize(input, target)
+          : input;
+    }
+    final translated =
+        await _translationEngine.translate(input, source, target) ?? input;
+    return outputStyle == ScriptMode.roman
+        ? Transliterator.romanize(translated, target)
+        : translated;
+  }
+
   Future<void> translateSelectedTextAuto(
     LanguagePack target, {
     bool speak = true,
@@ -1787,8 +1879,11 @@ class KeyboardController extends ChangeNotifier {
                 target,
               ) ??
               english;
-    await replacer(translated);
-    if (speak) await hostTextSpeaker?.call(translated, target.locale);
+    final output = _translateOutputStyle == ScriptMode.roman
+        ? Transliterator.romanize(translated, target)
+        : translated;
+    await replacer(output);
+    if (speak) await hostTextSpeaker?.call(output, target.locale);
   }
 
   void selectAll() {

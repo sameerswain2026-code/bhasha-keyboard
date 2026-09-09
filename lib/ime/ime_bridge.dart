@@ -54,6 +54,10 @@ class ImeBridge {
         // user types at least one new character first.
         await _resyncEditorFromHost();
       case 'finishInput':
+        // Android reuses the same IME Flutter engine after the keyboard is
+        // hidden. Close any tool/clipboard/translator panel here so the next
+        // opening always starts on the keyboard, not the previous panel.
+        kb.resetTransientStateForNewInput();
         _resetEditor();
       case 'externalTextChanged':
         // The host's text changed by a means we did NOT initiate -
@@ -234,8 +238,9 @@ class ImeBridge {
     try {
       final text = await _channel.invokeMethod<String>('getSelectedText');
       if (text != null && text.trim().isNotEmpty) return text;
-      final clipboard = await _channel.invokeMethod<String>('getClipboardText');
-      return clipboard?.trim().isEmpty == true ? null : clipboard;
+      // Writing tools must operate only on an actual host selection. The
+      // clipboard is intentionally not an implicit selection fallback.
+      return null;
     } catch (_) {
       return null;
     }
@@ -269,14 +274,16 @@ class ImeBridge {
   }) async {
     try {
       return await _mediaChannel.invokeMethod<bool>('commitMedia', {
-        'bytes': bytes,
-        'mimeType': mimeType,
-        'description': description,
-      }) ?? false;
+            'bytes': bytes,
+            'mimeType': mimeType,
+            'description': description,
+          }) ??
+          false;
     } catch (_) {
       return false;
     }
   }
+
   Future<void> stopSpeaking() async {
     try {
       await _channel.invokeMethod('stopSpeaking');

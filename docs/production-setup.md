@@ -46,9 +46,9 @@ The client boundary and Appwrite Auth/metadata adapter are present in `CloudConf
 
 Google sign-in requests the least-privilege `drive.file` scope. This permits access to files selected or created through the app without requesting broad access to the user's entire Drive. Gemini and Tavily calls route through `ai-gateway` when `APPWRITE_AI_GATEWAY_FUNCTION_ID` is configured. Sarvam's current audio WebSocket still needs a WebSocket-capable relay before its API key can be removed from the streaming path.
 
-Keyboard key feedback is routed through the native `InputMethodService` vibrator as well as Flutter's standard feedback API. This is required because the keyboard runs in another application's IME window, where activity-only feedback behavior is inconsistent across Android vendors.
+Keyboard key feedback is routed through the native `InputMethodService` vibrator with a short duration, reduced amplitude, and client-side throttling. This is required because the keyboard runs in another application's IME window, where activity-only feedback behavior is inconsistent across Android vendors.
 
-Console resources and Function deployment remain external provisioning steps because the Appwrite dashboard session did not expose project controls during setup. The Google Drive exchange, token refresh, revoke, folder mapping, password verification, and atomic server-side lockout functions must be deployed before Google Drive linking can be considered production-complete. No credentials are committed in this repository.
+Console resources and Function deployment remain external provisioning steps because the Appwrite dashboard session did not expose project controls during setup. The Google Drive exchange, token refresh, revoke, folder mapping, password verification, and atomic server-side lockout functions must be deployed before Google Drive linking can be considered production-complete. Provider API keys must also remain in a secure backend: the public Android release workflows deliberately do not pass Gemini, Sarvam, or Tavily keys into `--dart-define`, because compile-time keys are recoverable from an APK. Until a backend proxy is configured, those optional provider features fail safely instead of exposing credentials. No credentials are committed in this repository.
 
 ## Release gate
 

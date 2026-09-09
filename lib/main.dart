@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:appwrite/models.dart' as models;
 
 import 'core/keyboard_controller.dart';
 import 'engine/appwrite_document_repository.dart';
@@ -15,7 +16,10 @@ import 'ime/android_platform.dart';
 import 'ime/ime_bridge.dart';
 import 'ui/kb_theme.dart';
 import 'ui/keyboard_view.dart';
+import 'ui/panels/documents_panel.dart';
+import 'ui/panels/settings_panel.dart';
 import 'ui/setup_flow_screen.dart';
+import 'ui/welcome_flow_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,19 +50,19 @@ class BhashaKeyboardApp extends StatelessWidget {
       child: Consumer<KeyboardController>(
         builder: (context, kb, _) {
           return MaterialApp(
-            title: 'Bhasha Keyboard',
+            title: 'Bhasha Aura',
             debugShowCheckedModeBanner: false,
             themeMode: kb.themeMode,
             theme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.light,
-              colorSchemeSeed: const Color(0xFF1A73E8),
+              colorSchemeSeed: const Color(0xFF6D5BFF),
               scaffoldBackgroundColor: const Color(0xFFF7F8FA),
             ),
             darkTheme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.dark,
-              colorSchemeSeed: const Color(0xFF8AB4F8),
+              colorSchemeSeed: const Color(0xFF40D9C2),
               scaffoldBackgroundColor: const Color(0xFF121316),
             ),
             home: const _AppHome(),
@@ -69,10 +73,9 @@ class BhashaKeyboardApp extends StatelessWidget {
   }
 }
 
-/// Decides whether to show the one-time Android setup flow (enable IME,
-/// select IME, grant mic) before the demo editor. Only ever gates real
-/// Android launches - web preview and `flutter test` (host VM) go
-/// straight to the demo editor.
+/// Decides whether to show the branded first-run flow before the dashboard.
+/// Keyboard setup is deliberately not a launch gate; it is available from
+/// Settings and from the welcome flow when the user chooses it.
 class _AppHome extends StatefulWidget {
   const _AppHome();
 
@@ -81,8 +84,8 @@ class _AppHome extends StatefulWidget {
 }
 
 class _AppHomeState extends State<_AppHome> {
-  static const _prefKey = 'setup_flow_seen';
-  bool? _showSetup;
+  static const _prefKey = 'welcome_flow_seen';
+  bool? _showWelcome;
 
   @override
   void initState() {
@@ -92,39 +95,177 @@ class _AppHomeState extends State<_AppHome> {
 
   Future<void> _decide() async {
     if (!isRunningOnAndroidDevice) {
-      setState(() => _showSetup = false);
+      setState(() => _showWelcome = false);
       return;
     }
     try {
       final prefs = await SharedPreferences.getInstance();
-      setState(() => _showSetup = !(prefs.getBool(_prefKey) ?? false));
+      setState(() => _showWelcome = !(prefs.getBool(_prefKey) ?? false));
     } catch (_) {
-      setState(() => _showSetup = false);
+      setState(() => _showWelcome = false);
     }
   }
 
-  Future<void> _completeSetup() async {
+  Future<void> _completeWelcome() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefKey, true);
     } catch (_) {}
-    if (mounted) setState(() => _showSetup = false);
+    if (mounted) setState(() => _showWelcome = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_showSetup == null) {
+    if (_showWelcome == null) {
       return const Scaffold(body: SizedBox.shrink());
     }
-    if (_showSetup == true) {
-      return SetupFlowScreen(onContinue: _completeSetup);
+    if (_showWelcome == true) {
+      return WelcomeFlowScreen(onFinished: _completeWelcome);
     }
-    return const DemoEditorScreen();
+    return const CompanionDashboard();
   }
 }
 
 /// Root widget for the system IME: keyboard surface only, wired to the
 /// host app's text field via ImeBridge (commitText/deleteSurroundingText).
+/// Companion home shown after onboarding or Google sign-in. This keeps
+/// account state and the main feature entry points visible instead of sending
+/// the user directly into the demo editor.
+class CompanionDashboard extends StatefulWidget {
+  const CompanionDashboard({super.key});
+
+  @override
+  State<CompanionDashboard> createState() => _CompanionDashboardState();
+}
+
+class _CompanionDashboardState extends State<CompanionDashboard> {
+  final _cloud = AppwriteDocumentRepository();
+  late Future<models.User?> _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = _cloud.currentUser();
+  }
+
+  void _open(Widget page) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = KbTheme.of(context);
+    return Scaffold(
+      backgroundColor: t.background,
+      appBar: AppBar(
+        title: const Text('Bhasha Aura'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh account',
+            onPressed: () => setState(() => _user = _cloud.currentUser()),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: FutureBuilder<models.User?>(
+        future: _user,
+        builder: (context, snapshot) {
+          final user = snapshot.data;
+          final accountLabel = user == null
+              ? 'Guest mode · local keyboard ready'
+              : (user.name.trim().isEmpty ? user.email : user.name);
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                'Every voice, beautifully understood.',
+                style: TextStyle(color: t.keyTextSecondary),
+              ),
+              const SizedBox(height: 18),
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: t.accent,
+                    child: Icon(Icons.person, color: t.accentText),
+                  ),
+                  title: Text(accountLabel),
+                  subtitle: Text(
+                    user == null
+                        ? 'Sign in to connect cloud documents'
+                        : 'Google account connected',
+                  ),
+                  trailing: Icon(
+                    user == null ? Icons.cloud_off : Icons.verified,
+                    color: user == null ? t.keyTextSecondary : t.accent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _DashboardAction(
+                icon: Icons.keyboard_alt_outlined,
+                title: 'Open keyboard workspace',
+                subtitle: 'Type, translate, use voice and expressive tools',
+                onTap: () => _open(const DemoEditorScreen()),
+              ),
+              _DashboardAction(
+                icon: Icons.folder_outlined,
+                title: 'Documents',
+                subtitle: 'Link local or authorized cloud document references',
+                onTap: () => _open(
+                  const Scaffold(body: SafeArea(child: DocumentsPanel())),
+                ),
+              ),
+              _DashboardAction(
+                icon: Icons.settings_outlined,
+                title: 'Keyboard settings',
+                subtitle: 'Languages, themes, privacy and setup',
+                onTap: () => _open(
+                  const Scaffold(body: SafeArea(child: SettingsPanel())),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _open(
+                  SetupFlowScreen(
+                    onContinue: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                icon: const Icon(Icons.tune),
+                label: const Text('Run keyboard setup again'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DashboardAction extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _DashboardAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    ),
+  );
+}
+
 class BhashaImeApp extends StatefulWidget {
   const BhashaImeApp({super.key});
 
@@ -204,85 +345,128 @@ class DemoEditorScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // App bar
-            Container(
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               child: Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF1A73E8), Color(0xFF7C4DFF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF40D9C2),
+                          Color(0xFF6D5BFF),
+                          Color(0xFFE66CFF),
+                        ],
                       ),
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x336D5BFF),
+                          blurRadius: 14,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
                     ),
                     child: const Center(
                       child: Text(
                         'भ',
                         style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Bhasha Keyboard',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: t.keyText,
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'BHASHA AURA',
+                          style: TextStyle(
+                            fontSize: 13,
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.w800,
+                            color: t.keyText,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '22 Indian languages · Voice · Emoji · GIF',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: t.keyTextSecondary,
+                        Text(
+                          'Every voice, beautifully understood.',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: t.keyTextSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                  _StatusChip(label: kb.language.englishName, color: t.accent),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _MetricCard(
+                      t: t,
+                      icon: Icons.language_rounded,
+                      value: '22',
+                      label: 'languages',
                     ),
-                    decoration: BoxDecoration(
-                      color: t.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MetricCard(
+                      t: t,
+                      icon: Icons.auto_awesome_rounded,
+                      value: 'AURA',
+                      label: 'workspace',
                     ),
-                    child: Text(
-                      kb.language.englishName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: t.accent,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MetricCard(
+                      t: t,
+                      icon: Icons.mic_rounded,
+                      value: 'LIVE',
+                      label: 'voice ready',
                     ),
                   ),
                 ],
               ),
             ),
-            // Demo editor area
             Expanded(
               child: Container(
-                margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E2024) : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: t.border),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      isDark ? const Color(0xFF1C2034) : Colors.white,
+                      isDark
+                          ? const Color(0xFF161821)
+                          : const Color(0xFFF7F4FF),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: t.border.withValues(alpha: .65)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x12000000),
+                      blurRadius: 22,
+                      offset: Offset(0, 10),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,32 +474,33 @@ class DemoEditorScreen extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          Icons.edit_note,
-                          size: 16,
-                          color: t.keyTextSecondary,
+                          Icons.edit_note_rounded,
+                          size: 18,
+                          color: t.accent,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 7),
                         Text(
-                          'Demo editor — type with the keyboard below',
+                          'Your private canvas',
                           style: TextStyle(
-                            fontSize: 11,
-                            color: t.keyTextSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: t.keyText,
                           ),
                         ),
                         const Spacer(),
                         if (kb.editor.text.isNotEmpty)
-                          InkWell(
-                            onTap: () {
-                              kb.editor.clear();
-                            },
-                            child: Text(
-                              'Clear',
-                              style: TextStyle(fontSize: 11, color: t.accent),
-                            ),
+                          TextButton(
+                            onPressed: kb.editor.clear,
+                            child: const Text('Clear'),
                           ),
                       ],
                     ),
                     const SizedBox(height: 6),
+                    Text(
+                      'Compose in your language. Let Aura do the rest.',
+                      style: TextStyle(fontSize: 11, color: t.keyTextSecondary),
+                    ),
+                    const SizedBox(height: 10),
                     Expanded(
                       child: TextField(
                         controller: kb.editor,
@@ -325,16 +510,15 @@ class DemoEditorScreen extends StatelessWidget {
                         showCursor: true,
                         textAlignVertical: TextAlignVertical.top,
                         style: TextStyle(
-                          fontSize: 17,
+                          fontSize: 18,
                           height: 1.45,
                           color: t.keyText,
                         ),
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText:
-                              'नमस्ते! Try typing "namaste" in Hindi Roman mode…',
+                          hintText: 'नमस्ते! Try typing “namaste”…',
                           hintStyle: TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             color: t.keyTextSecondary,
                           ),
                         ),
@@ -344,11 +528,80 @@ class DemoEditorScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // The keyboard itself
             const KeyboardView(),
           ],
         ),
       ),
     );
   }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _StatusChip({required this.label, required this.color});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: color.withValues(alpha: .2)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+    ),
+  );
+}
+
+class _MetricCard extends StatelessWidget {
+  final KbTheme t;
+  final IconData icon;
+  final String value;
+  final String label;
+  const _MetricCard({
+    required this.t,
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+    decoration: BoxDecoration(
+      color: t.keyBg.withValues(alpha: .78),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: t.border.withValues(alpha: .7)),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 16, color: t.accent),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: t.keyText,
+                ),
+              ),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 8.5, color: t.keyTextSecondary),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

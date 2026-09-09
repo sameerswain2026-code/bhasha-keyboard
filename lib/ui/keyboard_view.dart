@@ -33,6 +33,7 @@ import 'panels/documents_panel.dart';
 import 'panels/gif_panel.dart';
 import 'panels/language_panel.dart';
 import 'panels/menu_panel.dart';
+import 'panels/manual_translate_panel.dart';
 import 'panels/resize_panel.dart';
 import 'panels/settings_panel.dart';
 import 'panels/sticker_panel.dart';
@@ -60,7 +61,36 @@ class KeyboardView extends StatelessWidget {
       children: [
         if (!panelOpen) _Toolbar(kb: kb),
         if (panelOpen)
-          SizedBox(height: _kFullBodyHeight, child: _panelFor(kb.panel))
+          SizedBox(
+            height: _kFullBodyHeight,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              reverseDuration: const Duration(milliseconds: 120),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  ...previousChildren,
+                  if (currentChild != null) currentChild,
+                ],
+              ),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.025, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: KeyedSubtree(
+                key: ValueKey<ActivePanel>(kb.panel),
+                child: _panelFor(kb.panel),
+              ),
+            ),
+          )
         else
           SizedBox(
             height: _kBodyHeight,
@@ -95,6 +125,8 @@ class KeyboardView extends StatelessWidget {
         return const ResizePanel();
       case ActivePanel.translateConfig:
         return const TranslateConfigPanel();
+      case ActivePanel.manualTranslate:
+        return const ManualTranslatePanel();
       case ActivePanel.transcribeLang:
         return const TranscribeLangPanel();
       case ActivePanel.clipboard:
@@ -839,7 +871,7 @@ class _AlphaLayer extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          _ScrollableKeyRow(
             children: [
               for (final c in layout.rows[0])
                 KeyWidget(
@@ -850,18 +882,17 @@ class _AlphaLayer extends StatelessWidget {
                 ),
             ],
           ),
-          Row(
+          _ScrollableKeyRow(
+            centered: true,
             children: [
-              const Spacer(flex: 1),
-              for (final c in layout.rows[1])
-                KeyWidget(
-                  label: display(c),
-                  fontSize: fontSize,
-                  flex: 2,
-                  heightScale: scale,
-                  onTap: () => _key(c),
-                ),
-              const Spacer(flex: 1),
+                for (final c in layout.rows[1])
+                  KeyWidget(
+                    label: display(c),
+                    fontSize: fontSize,
+                    flex: 2,
+                    heightScale: scale,
+                    onTap: () => _key(c),
+                  ),
             ],
           ),
           Row(
@@ -879,14 +910,21 @@ class _AlphaLayer extends StatelessWidget {
                   kb.tapShift();
                 },
               ),
-              for (final c in layout.rows[2])
-                KeyWidget(
-                  label: display(c),
-                  fontSize: fontSize,
-                  flex: 2,
-                  heightScale: scale,
-                  onTap: () => _key(c),
+              Expanded(
+                child: _ScrollableKeyRow(
+                  children: [
+                    for (final c in layout.rows[2])
+                      KeyWidget(
+                        label: display(c),
+                        fontSize: fontSize,
+                        flex: 2,
+                        expand: false,
+                        heightScale: scale,
+                        onTap: () => _key(c),
+                      ),
+                  ],
                 ),
+              ),
               KeyWidget(
                 icon: Icons.backspace_outlined,
                 special: true,
@@ -912,6 +950,48 @@ class _AlphaLayer extends StatelessWidget {
           ),
           _BottomRow(kb: kb),
         ],
+      ),
+    );
+  }
+}
+
+class _ScrollableKeyRow extends StatelessWidget {
+  final List<Widget> children;
+  final bool centered;
+
+  const _ScrollableKeyRow({required this.children, this.centered = false});
+
+  @override
+  Widget build(BuildContext context) {
+    // Normal language rows must use the complete available width. The old
+    // fixed 58dp keys overflowed on narrow phones and hid the rightmost keys
+    // behind the IME window. Very long inventories keep horizontal scrolling
+    // as an intentional fallback.
+    if (children.length <= 12) {
+      return SizedBox(
+        height: 58,
+        child: Row(
+          mainAxisAlignment: centered
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
+          children: children,
+        ),
+      );
+    }
+    return SizedBox(
+      height: 58,
+      child: Scrollbar(
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: centered
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
+            children: children,
+          ),
+        ),
       ),
     );
   }

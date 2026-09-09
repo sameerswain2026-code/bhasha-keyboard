@@ -28,6 +28,11 @@ class _MenuItem {
 const List<_MenuItem> _items = [
   _MenuItem(Icons.palette_outlined, 'Theme', panel: ActivePanel.theme),
   _MenuItem(Icons.cloud_outlined, 'Documents', panel: ActivePanel.documents),
+  _MenuItem(
+    Icons.translate,
+    'Manual Translate',
+    panel: ActivePanel.manualTranslate,
+  ),
   _MenuItem(Icons.gif_box_outlined, 'GIF', panel: ActivePanel.gif),
   _MenuItem(
     Icons.emoji_emotions_outlined,

@@ -43,40 +43,47 @@ class LinkedDocument {
   });
 
   factory LinkedDocument.fromJson(Map<String, dynamic> json) => LinkedDocument(
-        id: json['id'] as String? ?? json['uri'] as String? ?? '',
-        label: json['label'] as String? ?? 'General',
-        groupName: json['groupName'] as String? ?? 'General',
-        driveFileId: json['driveFileId'] as String? ?? '',
-        driveFolderId: json['driveFolderId'] as String? ?? '',
-        remoteRowId: json['remoteRowId'] as String? ?? '',
-        displayName: json['displayName'] as String? ?? 'Document',
-        uri: json['uri'] as String? ?? '',
-        mimeType: json['mimeType'] as String? ?? 'application/octet-stream',
-        linkedAt: DateTime.tryParse(json['linkedAt'] as String? ?? '') ??
-            DateTime.fromMillisecondsSinceEpoch(0),
-        lockStatus: json['lockStatus'] as String? ?? 'unlocked',
-        failedAttempts: (json['failedAttempts'] as num?)?.toInt() ?? 0,
-        lockedUntil: DateTime.tryParse(json['lockedUntil'] as String? ?? ''),
-      );
+    id: json['id'] as String? ?? json['uri'] as String? ?? '',
+    label: json['label'] as String? ?? 'General',
+    groupName: json['groupName'] as String? ?? 'General',
+    driveFileId: json['driveFileId'] as String? ?? '',
+    driveFolderId: json['driveFolderId'] as String? ?? '',
+    remoteRowId: json['remoteRowId'] as String? ?? '',
+    displayName: json['displayName'] as String? ?? 'Document',
+    uri: json['uri'] as String? ?? '',
+    mimeType: json['mimeType'] as String? ?? 'application/octet-stream',
+    linkedAt:
+        DateTime.tryParse(json['linkedAt'] as String? ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    lockStatus: json['lockStatus'] as String? ?? 'unlocked',
+    failedAttempts: (json['failedAttempts'] as num?)?.toInt() ?? 0,
+    lockedUntil: DateTime.tryParse(json['lockedUntil'] as String? ?? ''),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'label': label,
-        'groupName': groupName,
-        'driveFileId': driveFileId,
-        'driveFolderId': driveFolderId,
-        'remoteRowId': remoteRowId,
-        'displayName': displayName,
-        'uri': uri,
-        'mimeType': mimeType,
-        'linkedAt': linkedAt.toIso8601String(),
-        'lockStatus': lockStatus,
-        'failedAttempts': failedAttempts,
-        if (lockedUntil != null) 'lockedUntil': lockedUntil!.toIso8601String(),
-      };
+    'id': id,
+    'label': label,
+    'groupName': groupName,
+    'driveFileId': driveFileId,
+    'driveFolderId': driveFolderId,
+    'remoteRowId': remoteRowId,
+    'displayName': displayName,
+    'uri': uri,
+    'mimeType': mimeType,
+    'linkedAt': linkedAt.toIso8601String(),
+    'lockStatus': lockStatus,
+    'failedAttempts': failedAttempts,
+    if (lockedUntil != null) 'lockedUntil': lockedUntil!.toIso8601String(),
+  };
 }
 
-enum DocumentOperationResult { uploaded, pickerRequired, authenticationRequired, notFound, unsupported }
+enum DocumentOperationResult {
+  uploaded,
+  pickerRequired,
+  authenticationRequired,
+  notFound,
+  unsupported,
+}
 
 class DocumentOperation {
   final DocumentOperationResult result;
@@ -155,7 +162,9 @@ class DocumentManager {
         try {
           final row = await repository!.saveReference(
             document: document,
-            driveFileId: document.driveFileId.isEmpty ? document.uri : document.driveFileId,
+            driveFileId: document.driveFileId.isEmpty
+                ? document.uri
+                : document.driveFileId,
             driveFolderId: document.driveFolderId,
             groupName: document.groupName,
           );
@@ -172,7 +181,10 @@ class DocumentManager {
               mimeType: document.mimeType,
               linkedAt: document.linkedAt,
             );
-            _documents = [..._documents.where((item) => item.id != document.id), synced];
+            _documents = [
+              ..._documents.where((item) => item.id != document.id),
+              synced,
+            ];
             await _save();
             return synced;
           }
@@ -189,11 +201,15 @@ class DocumentManager {
   Future<void> unlink(String id) async {
     await load();
     final target = _documents.where((doc) => doc.id == id).firstOrNull;
-    _documents = _documents.where((doc) => doc.id != id).toList(growable: false);
+    _documents = _documents
+        .where((doc) => doc.id != id)
+        .toList(growable: false);
     await _save();
     if (target != null) {
       if (repository != null && target.remoteRowId.isNotEmpty) {
-        try { await repository!.deleteReference(target.remoteRowId); } catch (_) {}
+        try {
+          await repository!.deleteReference(target.remoteRowId);
+        } catch (_) {}
       }
       try {
         await _channel.invokeMethod('releaseDocument', {'uri': target.uri});
@@ -206,23 +222,25 @@ class DocumentManager {
     final trimmed = label.trim();
     if (trimmed.isEmpty) return;
     _documents = _documents
-        .map((doc) => doc.id == id
-            ? LinkedDocument(
-                id: doc.id,
-                label: trimmed,
-                groupName: doc.groupName,
-                driveFileId: doc.driveFileId,
-                driveFolderId: doc.driveFolderId,
-                remoteRowId: doc.remoteRowId,
-                displayName: doc.displayName,
-                uri: doc.uri,
-                mimeType: doc.mimeType,
-                linkedAt: doc.linkedAt,
-                lockStatus: doc.lockStatus,
-                failedAttempts: doc.failedAttempts,
-                lockedUntil: doc.lockedUntil,
-              )
-            : doc)
+        .map(
+          (doc) => doc.id == id
+              ? LinkedDocument(
+                  id: doc.id,
+                  label: trimmed,
+                  groupName: doc.groupName,
+                  driveFileId: doc.driveFileId,
+                  driveFolderId: doc.driveFolderId,
+                  remoteRowId: doc.remoteRowId,
+                  displayName: doc.displayName,
+                  uri: doc.uri,
+                  mimeType: doc.mimeType,
+                  linkedAt: doc.linkedAt,
+                  lockStatus: doc.lockStatus,
+                  failedAttempts: doc.failedAttempts,
+                  lockedUntil: doc.lockedUntil,
+                )
+              : doc,
+        )
         .toList(growable: false);
     await _save();
   }
@@ -232,23 +250,25 @@ class DocumentManager {
     final trimmed = group.trim();
     if (trimmed.isEmpty) return;
     _documents = _documents
-        .map((doc) => doc.id == id
-            ? LinkedDocument(
-                id: doc.id,
-                label: doc.label,
-                groupName: trimmed,
-                driveFileId: doc.driveFileId,
-                driveFolderId: doc.driveFolderId,
-                remoteRowId: doc.remoteRowId,
-                displayName: doc.displayName,
-                uri: doc.uri,
-                mimeType: doc.mimeType,
-                linkedAt: doc.linkedAt,
-                lockStatus: doc.lockStatus,
-                failedAttempts: doc.failedAttempts,
-                lockedUntil: doc.lockedUntil,
-              )
-            : doc)
+        .map(
+          (doc) => doc.id == id
+              ? LinkedDocument(
+                  id: doc.id,
+                  label: doc.label,
+                  groupName: trimmed,
+                  driveFileId: doc.driveFileId,
+                  driveFolderId: doc.driveFolderId,
+                  remoteRowId: doc.remoteRowId,
+                  displayName: doc.displayName,
+                  uri: doc.uri,
+                  mimeType: doc.mimeType,
+                  linkedAt: doc.linkedAt,
+                  lockStatus: doc.lockStatus,
+                  failedAttempts: doc.failedAttempts,
+                  lockedUntil: doc.lockedUntil,
+                )
+              : doc,
+        )
         .toList(growable: false);
     await _save();
     final target = _documents.firstWhere((doc) => doc.id == id);
@@ -279,10 +299,8 @@ class DocumentManager {
       );
     }
     try {
-      final authenticated = await _channel.invokeMethod<bool>(
-            'authenticateDocument',
-          ) ??
-          false;
+      final authenticated =
+          await _channel.invokeMethod<bool>('authenticateDocument') ?? false;
       if (!authenticated) {
         await _recordFailedAttempt(document.id);
         return const DocumentOperation(
@@ -290,14 +308,12 @@ class DocumentManager {
           'Unlock Bhasha Keyboard in the app before uploading a linked document.',
         );
       }
-      final committed = await _channel.invokeMethod<bool>(
-            'commitDocument',
-            {
-              'uri': document.uri,
-              'displayName': document.displayName,
-              'mimeType': document.mimeType,
-            },
-          ) ??
+      final committed =
+          await _channel.invokeMethod<bool>('commitDocument', {
+            'uri': document.uri,
+            'displayName': document.displayName,
+            'mimeType': document.mimeType,
+          }) ??
           false;
       if (committed) {
         await _resetFailedAttempts(document.id);
@@ -320,33 +336,12 @@ class DocumentManager {
 
   Future<void> _recordFailedAttempt(String id) async {
     await load();
-    _documents = _documents.map((doc) {
-      if (doc.id != id) return doc;
-      final attempts = doc.failedAttempts + 1;
-      final locked = attempts >= _maxFailedAttempts;
-      return LinkedDocument(
-        id: doc.id,
-        label: doc.label,
-        groupName: doc.groupName,
-        driveFileId: doc.driveFileId,
-        driveFolderId: doc.driveFolderId,
-        remoteRowId: doc.remoteRowId,
-        displayName: doc.displayName,
-        uri: doc.uri,
-        mimeType: doc.mimeType,
-        linkedAt: doc.linkedAt,
-        lockStatus: locked ? 'locked' : 'unlocked',
-        failedAttempts: attempts,
-        lockedUntil: locked ? DateTime.now().add(_lockout) : null,
-      );
-    }).toList(growable: false);
-    await _save();
-  }
-
-  Future<void> _resetFailedAttempts(String id) async {
-    await load();
-    _documents = _documents.map((doc) => doc.id == id
-        ? LinkedDocument(
+    _documents = _documents
+        .map((doc) {
+          if (doc.id != id) return doc;
+          final attempts = doc.failedAttempts + 1;
+          final locked = attempts >= _maxFailedAttempts;
+          return LinkedDocument(
             id: doc.id,
             label: doc.label,
             groupName: doc.groupName,
@@ -357,9 +352,36 @@ class DocumentManager {
             uri: doc.uri,
             mimeType: doc.mimeType,
             linkedAt: doc.linkedAt,
-            lockStatus: 'unlocked',
-          )
-        : doc).toList(growable: false);
+            lockStatus: locked ? 'locked' : 'unlocked',
+            failedAttempts: attempts,
+            lockedUntil: locked ? DateTime.now().add(_lockout) : null,
+          );
+        })
+        .toList(growable: false);
+    await _save();
+  }
+
+  Future<void> _resetFailedAttempts(String id) async {
+    await load();
+    _documents = _documents
+        .map(
+          (doc) => doc.id == id
+              ? LinkedDocument(
+                  id: doc.id,
+                  label: doc.label,
+                  groupName: doc.groupName,
+                  driveFileId: doc.driveFileId,
+                  driveFolderId: doc.driveFolderId,
+                  remoteRowId: doc.remoteRowId,
+                  displayName: doc.displayName,
+                  uri: doc.uri,
+                  mimeType: doc.mimeType,
+                  linkedAt: doc.linkedAt,
+                  lockStatus: 'unlocked',
+                )
+              : doc,
+        )
+        .toList(growable: false);
     await _save();
   }
 
@@ -379,14 +401,20 @@ class DocumentCommand {
   const DocumentCommand(this.label);
 
   static DocumentCommand? parse(String utterance) {
-    final normalized = utterance.toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), ' ');
+    final normalized = utterance.toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9 ]'),
+      ' ',
+    );
     final match = RegExp(
       r'\b(?:upload|attach|send|share|use|open)\s+(?:my\s+)?(resume|cv|education|certificate|degree|document|marksheet|aadhaar|passport)\b',
     ).firstMatch(normalized);
     if (match == null) return null;
     final value = match.group(1)!;
-    return DocumentCommand(value == 'cv' ? 'Resume' : value[0].toUpperCase() + value.substring(1));
+    return DocumentCommand(
+      value == 'cv' ? 'Resume' : value[0].toUpperCase() + value.substring(1),
+    );
   }
 }
+
 const _documentCommandNotice = 'Document command detected';
 String documentCommandNotice() => _documentCommandNotice;

@@ -56,7 +56,7 @@ class TextEditingPanel extends StatelessWidget {
     final kb = context.watch<KeyboardController>();
     final t = KbTheme.of(context);
 
-    Widget action(IconData icon, String label, VoidCallback onTap) {
+    Widget action(IconData icon, String label, VoidCallback? onTap) {
       return InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
@@ -91,12 +91,17 @@ class TextEditingPanel extends StatelessWidget {
                 const PanelBackButton(),
                 Icon(Icons.text_fields, size: 16, color: t.icon),
                 const SizedBox(width: 8),
-                Text(
-                  'Text Editing',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: t.keyText,
+                Expanded(
+                  child: Text(
+                    kb.writingBusy
+                        ? 'AI writing…'
+                        : (kb.writingStatus ?? 'Text Editing'),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: kb.writingBusy ? t.accent : t.keyText,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -156,6 +161,13 @@ class TextEditingPanel extends StatelessWidget {
                     Icons.reply,
                     'Suggest reply',
                     () => kb.transformSelectedText(WritingAction.reply),
+                  ),
+                  action(
+                    Icons.compress,
+                    'Make concise',
+                    kb.writingBusy
+                        ? null
+                        : () => kb.transformSelectedText(WritingAction.concise),
                   ),
                   action(
                     Icons.volume_up_outlined,

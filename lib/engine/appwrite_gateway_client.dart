@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/enums.dart' as enums;
 
 import '../config/cloud_config.dart';
 
@@ -34,7 +35,8 @@ class AppwriteGatewayClient {
       body: jsonEncode(payload),
       xasync: false,
     );
-    if (result.status != 'completed' || result.responseBody.isEmpty) {
+    if (result.status != enums.ExecutionStatus.completed ||
+        result.responseBody.isEmpty) {
       throw StateError('AI gateway execution did not complete');
     }
     final decoded = jsonDecode(result.responseBody);
@@ -42,5 +44,30 @@ class AppwriteGatewayClient {
       throw const FormatException('AI gateway returned an invalid response');
     }
     return Map<String, dynamic>.from(decoded['data'] as Map);
+  }
+
+  /// Calls the server-side Drive workflow. The client receives metadata or a
+  /// status object only; OAuth refresh tokens and document bytes stay server
+  /// side.
+  Future<Map<String, dynamic>?> callDrive({
+    required String action,
+    Map<String, dynamic> body = const <String, dynamic>{},
+  }) async {
+    if (!CloudConfig.driveGatewayConfigured) return null;
+    final result = await _functions.createExecution(
+      functionId: CloudConfig.driveGatewayFunctionId,
+      body: jsonEncode(<String, dynamic>{'action': action, ...body}),
+      xasync: false,
+    );
+    if (result.status != enums.ExecutionStatus.completed ||
+        result.responseBody.isEmpty) {
+      throw StateError('Drive gateway execution did not complete');
+    }
+    final decoded = jsonDecode(result.responseBody);
+    if (decoded is! Map) {
+      throw const FormatException('Drive gateway returned an invalid response');
+    }
+    final data = decoded['data'];
+    return Map<String, dynamic>.from(data is Map ? data : decoded);
   }
 }

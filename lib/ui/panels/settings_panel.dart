@@ -110,6 +110,72 @@ class SettingsPanel extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
+                Container(
+                  margin: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        t.accent.withValues(alpha: 0.16),
+                        t.accent.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: t.accent.withValues(alpha: 0.22)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.route_outlined, color: t.accent, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Finish your setup',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: t.keyText,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Enable the keyboard, choose it as active, then turn on voice typing.',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                height: 1.3,
+                                color: t.keyTextSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 30,
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => SetupFlowScreen(
+                                        onContinue: () =>
+                                            Navigator.of(context).pop(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.arrow_forward, size: 14),
+                                label: const Text(
+                                  'Open guided setup',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 if (ImeSetupHelper.isSupported) ...[
                   ListTile(
                     dense: true,

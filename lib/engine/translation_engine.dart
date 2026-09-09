@@ -11,6 +11,37 @@ abstract class TranslationProvider {
   Future<String?> translate(String text, LanguagePack from, LanguagePack to);
 }
 
+/// Fast offline detector for selected text using Unicode script ranges.
+class TranslationLanguageDetector {
+  static LanguagePack detect(String text) {
+    final scores = <String, int>{};
+    for (final rune in text.runes) {
+      final id = _scriptId(rune);
+      if (id != null) scores[id] = (scores[id] ?? 0) + 1;
+    }
+    if (scores.isEmpty) return LanguageRegistry.byId('en');
+    final best = scores.entries.reduce((a, b) => a.value >= b.value ? a : b);
+    return LanguageRegistry.byId(best.key);
+  }
+
+  static String? _scriptId(int r) {
+    if (r >= 0x0900 && r <= 0x097F) return 'hi';
+    if (r >= 0x0980 && r <= 0x09FF) return 'bn';
+    if (r >= 0x0A00 && r <= 0x0A7F) return 'pa';
+    if (r >= 0x0A80 && r <= 0x0AFF) return 'gu';
+    if (r >= 0x0B00 && r <= 0x0B7F) return 'or';
+    if (r >= 0x0B80 && r <= 0x0BFF) return 'ta';
+    if (r >= 0x0C00 && r <= 0x0C7F) return 'te';
+    if (r >= 0x0C80 && r <= 0x0CFF) return 'kn';
+    if (r >= 0x0D00 && r <= 0x0D7F) return 'ml';
+    if (r >= 0x0600 && r <= 0x06FF) return 'ur';
+    if ((r >= 0x0041 && r <= 0x005A) || (r >= 0x0061 && r <= 0x007A)) {
+      return 'en';
+    }
+    return null;
+  }
+}
+
 /// Offline dictionary provider: common phrases between English and
 /// major Indian languages, with transliteration fallback.
 class OfflineTranslationProvider implements TranslationProvider {

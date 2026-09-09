@@ -6,8 +6,8 @@
 /// resets (limits may recover over time) rather than getting permanently
 /// stuck.
 ///
-/// Keys are supplied at build time through TAVILY_API_KEYS. No credential is
-/// stored in source control. For a public production app, prefer a backend.
+/// Legacy local-development fallback. Public builds must leave this empty and
+/// route Tavily through the authenticated Appwrite gateway instead.
 library;
 
 class TavilyKeyPool {

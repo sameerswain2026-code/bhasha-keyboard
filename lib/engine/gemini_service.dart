@@ -225,7 +225,7 @@ class GeminiService {
         },
       );
       if (response == null) {
-        throw const StateError('Gemini gateway is not configured');
+        throw StateError('Gemini gateway is not configured');
       }
       final text = _extractText(jsonEncode(response));
       if (text == null) throw const FormatException('Gemini gateway: no text');
