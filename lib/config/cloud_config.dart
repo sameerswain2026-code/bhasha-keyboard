@@ -38,4 +38,3 @@ class CloudConfig {
   static bool get aiGatewayConfigured => aiGatewayFunctionId.isNotEmpty;
   static bool get driveGatewayConfigured => driveGatewayFunctionId.isNotEmpty;
 }
-EOF
