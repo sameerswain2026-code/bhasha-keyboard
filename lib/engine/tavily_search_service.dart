@@ -42,11 +42,11 @@ class TavilySearchService {
     TavilyKeyPool? keyPool,
     http.Client? client,
     AppwriteGatewayClient? gateway,
-  })
-    : _pool = keyPool ?? TavilyKeyPool.production(),
-      _client = client ?? http.Client(),
-      _gateway = gateway ??
-          (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
+  }) : _pool = keyPool ?? TavilyKeyPool.production(),
+       _client = client ?? http.Client(),
+       _gateway =
+           gateway ??
+           (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
 
   static const String _endpoint = 'https://api.tavily.com/search';
   static const Duration _timeout = Duration(seconds: 8);

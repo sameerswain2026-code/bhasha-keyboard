@@ -9,7 +9,7 @@ import '../config/cloud_config.dart';
 /// The Function receives the user's existing Appwrite session automatically.
 class AppwriteGatewayClient {
   AppwriteGatewayClient({Client? client})
-      : _functions = Functions(client ?? _newClient());
+    : _functions = Functions(client ?? _newClient());
 
   static Client _newClient() => Client()
     ..setEndpoint(CloudConfig.endpoint)

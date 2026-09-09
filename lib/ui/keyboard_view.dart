@@ -885,14 +885,14 @@ class _AlphaLayer extends StatelessWidget {
           _ScrollableKeyRow(
             centered: true,
             children: [
-                for (final c in layout.rows[1])
-                  KeyWidget(
-                    label: display(c),
-                    fontSize: fontSize,
-                    flex: 2,
-                    heightScale: scale,
-                    onTap: () => _key(c),
-                  ),
+              for (final c in layout.rows[1])
+                KeyWidget(
+                  label: display(c),
+                  fontSize: fontSize,
+                  flex: 2,
+                  heightScale: scale,
+                  onTap: () => _key(c),
+                ),
             ],
           ),
           Row(
@@ -918,7 +918,6 @@ class _AlphaLayer extends StatelessWidget {
                         label: display(c),
                         fontSize: fontSize,
                         flex: 2,
-                        expand: false,
                         heightScale: scale,
                         onTap: () => _key(c),
                       ),

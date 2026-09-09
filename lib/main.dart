@@ -122,7 +122,12 @@ class _AppHomeState extends State<_AppHome> {
     if (_showWelcome == true) {
       return WelcomeFlowScreen(onFinished: _completeWelcome);
     }
-    return const CompanionDashboard();
+    // The web/desktop preview is also the widget-test host. Keep it focused
+    // on the existing keyboard surface, while Android continues to use the
+    // branded companion dashboard after onboarding.
+    return isRunningOnAndroidDevice
+        ? const CompanionDashboard()
+        : const DemoEditorScreen();
   }
 }
 
