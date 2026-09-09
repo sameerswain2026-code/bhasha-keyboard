@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}
