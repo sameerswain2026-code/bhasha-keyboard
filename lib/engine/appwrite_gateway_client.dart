@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/enums.dart' as enums;
 
 import '../config/cloud_config.dart';
 
@@ -34,7 +35,8 @@ class AppwriteGatewayClient {
       body: jsonEncode(payload),
       xasync: false,
     );
-    if (result.status != 'completed' || result.responseBody.isEmpty) {
+    if (result.status != enums.ExecutionStatus.completed ||
+        result.responseBody.isEmpty) {
       throw StateError('AI gateway execution did not complete');
     }
     final decoded = jsonDecode(result.responseBody);
@@ -57,7 +59,8 @@ class AppwriteGatewayClient {
       body: jsonEncode(<String, dynamic>{'action': action, ...body}),
       xasync: false,
     );
-    if (result.status != 'completed' || result.responseBody.isEmpty) {
+    if (result.status != enums.ExecutionStatus.completed ||
+        result.responseBody.isEmpty) {
       throw StateError('Drive gateway execution did not complete');
     }
     final decoded = jsonDecode(result.responseBody);
