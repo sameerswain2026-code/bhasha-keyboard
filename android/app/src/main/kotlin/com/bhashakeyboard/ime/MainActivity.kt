@@ -73,6 +73,29 @@ class MainActivity : FlutterActivity() {
             }
         micStream = MicStreamHandler()
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "bhasha/mic").setStreamHandler(micStream)
+        handleImeIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleImeIntent(intent)
+    }
+
+    private fun handleImeIntent(intent: Intent?) {
+        if (intent?.action != "com.bhashakeyboard.OPEN_DOCUMENT_PICKER") return
+        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "text/plain",
+                "image/*",
+            ))
+        }, documentRequestCode)
     }
 
     private fun authenticateDocument(result: MethodChannel.Result) {
@@ -84,15 +107,31 @@ class MainActivity : FlutterActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        val result = pendingDocumentResult ?: return
-        pendingDocumentResult = null
-        if (requestCode == authRequestCode) {
-            result.success(resultCode == RESULT_OK)
-        } else if (requestCode == documentRequestCode) {
+        if (requestCode == documentRequestCode) {
             val uri = data?.data
-            if (resultCode != RESULT_OK || uri == null) { result.success(null); return }
+            if (resultCode != RESULT_OK || uri == null) {
+                pendingDocumentResult?.success(null)
+                pendingDocumentResult = null
+                sendBroadcast(Intent("com.bhashakeyboard.DOCUMENT_PICK").apply {
+                    setPackage(packageName)
+                })
+                return
+            }
             try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: SecurityException) {}
-            result.success(mapOf("uri" to uri.toString(), "displayName" to displayName(uri), "mimeType" to (contentResolver.getType(uri) ?: "application/octet-stream")))
+            val name = displayName(uri)
+            val mime = contentResolver.getType(uri) ?: "application/octet-stream"
+            pendingDocumentResult?.success(mapOf("uri" to uri.toString(), "displayName" to name, "mimeType" to mime))
+            pendingDocumentResult = null
+            sendBroadcast(Intent("com.bhashakeyboard.DOCUMENT_PICK").apply {
+                setPackage(packageName)
+                putExtra("uri", uri.toString())
+                putExtra("displayName", name)
+                putExtra("mimeType", mime)
+            })
+        } else if (requestCode == authRequestCode) {
+            val result = pendingDocumentResult ?: return
+            pendingDocumentResult = null
+            result.success(resultCode == RESULT_OK)
         }
     }
 

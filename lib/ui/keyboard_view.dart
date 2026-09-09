@@ -912,12 +912,20 @@ class _AlphaLayer extends StatelessWidget {
               ),
               Expanded(
                 child: _ScrollableKeyRow(
+                  fixedWidth: true,
                   children: [
                     for (final c in layout.rows[2])
                       KeyWidget(
                         label: display(c),
                         fontSize: fontSize,
                         flex: 2,
+                        // The bottom alphabet row is nested between Shift and
+                        // Backspace. Fixed-width keys inside a horizontal
+                        // scroller remain usable even when the IME window is
+                        // temporarily narrow (one-handed mode, insets, or a
+                        // vendor-resized IME); flex children otherwise shrink
+                        // into each other and become visually unreadable.
+                        expand: false,
                         heightScale: scale,
                         onTap: () => _key(c),
                       ),
@@ -957,8 +965,13 @@ class _AlphaLayer extends StatelessWidget {
 class _ScrollableKeyRow extends StatelessWidget {
   final List<Widget> children;
   final bool centered;
+  final bool fixedWidth;
 
-  const _ScrollableKeyRow({required this.children, this.centered = false});
+  const _ScrollableKeyRow({
+    required this.children,
+    this.centered = false,
+    this.fixedWidth = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -966,7 +979,7 @@ class _ScrollableKeyRow extends StatelessWidget {
     // fixed 58dp keys overflowed on narrow phones and hid the rightmost keys
     // behind the IME window. Very long inventories keep horizontal scrolling
     // as an intentional fallback.
-    if (children.length <= 12) {
+    if (children.length <= 12 && !fixedWidth) {
       return SizedBox(
         height: 58,
         child: Row(
@@ -977,22 +990,17 @@ class _ScrollableKeyRow extends StatelessWidget {
         ),
       );
     }
-    return SizedBox(
-      height: 58,
-      child: Scrollbar(
-        thumbVisibility: true,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: centered
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
-            children: children,
-          ),
-        ),
+    final row = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: centered
+            ? MainAxisAlignment.center
+            : MainAxisAlignment.start,
+        children: children,
       ),
     );
+    return SizedBox(height: 58, child: row);
   }
 }
 
