@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:appwrite/models.dart' as models;
 
 import 'core/keyboard_controller.dart';
 import 'engine/appwrite_document_repository.dart';
@@ -15,6 +16,9 @@ import 'ime/android_platform.dart';
 import 'ime/ime_bridge.dart';
 import 'ui/kb_theme.dart';
 import 'ui/keyboard_view.dart';
+import 'ui/panels/documents_panel.dart';
+import 'ui/panels/settings_panel.dart';
+import 'ui/setup_flow_screen.dart';
 import 'ui/welcome_flow_screen.dart';
 
 void main() {
@@ -118,12 +122,150 @@ class _AppHomeState extends State<_AppHome> {
     if (_showWelcome == true) {
       return WelcomeFlowScreen(onFinished: _completeWelcome);
     }
-    return const DemoEditorScreen();
+    return const CompanionDashboard();
   }
 }
 
 /// Root widget for the system IME: keyboard surface only, wired to the
 /// host app's text field via ImeBridge (commitText/deleteSurroundingText).
+/// Companion home shown after onboarding or Google sign-in. This keeps
+/// account state and the main feature entry points visible instead of sending
+/// the user directly into the demo editor.
+class CompanionDashboard extends StatefulWidget {
+  const CompanionDashboard({super.key});
+
+  @override
+  State<CompanionDashboard> createState() => _CompanionDashboardState();
+}
+
+class _CompanionDashboardState extends State<CompanionDashboard> {
+  final _cloud = AppwriteDocumentRepository();
+  late Future<models.User?> _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = _cloud.currentUser();
+  }
+
+  void _open(Widget page) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = KbTheme.of(context);
+    return Scaffold(
+      backgroundColor: t.background,
+      appBar: AppBar(
+        title: const Text('Bhasha Aura'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh account',
+            onPressed: () => setState(() => _user = _cloud.currentUser()),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: FutureBuilder<models.User?>(
+        future: _user,
+        builder: (context, snapshot) {
+          final user = snapshot.data;
+          final accountLabel = user == null
+              ? 'Guest mode · local keyboard ready'
+              : (user.name.trim().isEmpty ? user.email : user.name);
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                'Every voice, beautifully understood.',
+                style: TextStyle(color: t.keyTextSecondary),
+              ),
+              const SizedBox(height: 18),
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: t.accent,
+                    child: Icon(Icons.person, color: t.accentText),
+                  ),
+                  title: Text(accountLabel),
+                  subtitle: Text(
+                    user == null
+                        ? 'Sign in to connect cloud documents'
+                        : 'Google account connected',
+                  ),
+                  trailing: Icon(
+                    user == null ? Icons.cloud_off : Icons.verified,
+                    color: user == null ? t.keyTextSecondary : t.accent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _DashboardAction(
+                icon: Icons.keyboard_alt_outlined,
+                title: 'Open keyboard workspace',
+                subtitle: 'Type, translate, use voice and expressive tools',
+                onTap: () => _open(const DemoEditorScreen()),
+              ),
+              _DashboardAction(
+                icon: Icons.folder_outlined,
+                title: 'Documents',
+                subtitle: 'Link local or authorized cloud document references',
+                onTap: () => _open(
+                  const Scaffold(body: SafeArea(child: DocumentsPanel())),
+                ),
+              ),
+              _DashboardAction(
+                icon: Icons.settings_outlined,
+                title: 'Keyboard settings',
+                subtitle: 'Languages, themes, privacy and setup',
+                onTap: () => _open(
+                  const Scaffold(body: SafeArea(child: SettingsPanel())),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _open(
+                  SetupFlowScreen(
+                    onContinue: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                icon: const Icon(Icons.tune),
+                label: const Text('Run keyboard setup again'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DashboardAction extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _DashboardAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    ),
+  );
+}
+
 class BhashaImeApp extends StatefulWidget {
   const BhashaImeApp({super.key});
 

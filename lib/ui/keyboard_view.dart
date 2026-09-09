@@ -877,7 +877,6 @@ class _AlphaLayer extends StatelessWidget {
                 KeyWidget(
                   label: display(c),
                   fontSize: fontSize,
-                  expand: false,
                   heightScale: scale,
                   onTap: () => _key(c),
                 ),
@@ -886,15 +885,14 @@ class _AlphaLayer extends StatelessWidget {
           _ScrollableKeyRow(
             centered: true,
             children: [
-              for (final c in layout.rows[1])
-                KeyWidget(
-                  label: display(c),
-                  fontSize: fontSize,
-                  flex: 2,
-                  expand: false,
-                  heightScale: scale,
-                  onTap: () => _key(c),
-                ),
+                for (final c in layout.rows[1])
+                  KeyWidget(
+                    label: display(c),
+                    fontSize: fontSize,
+                    flex: 2,
+                    heightScale: scale,
+                    onTap: () => _key(c),
+                  ),
             ],
           ),
           Row(
@@ -964,22 +962,39 @@ class _ScrollableKeyRow extends StatelessWidget {
   const _ScrollableKeyRow({required this.children, this.centered = false});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 58,
-    child: Scrollbar(
-      thumbVisibility: children.length > 12,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+  Widget build(BuildContext context) {
+    // Normal language rows must use the complete available width. The old
+    // fixed 58dp keys overflowed on narrow phones and hid the rightmost keys
+    // behind the IME window. Very long inventories keep horizontal scrolling
+    // as an intentional fallback.
+    if (children.length <= 12) {
+      return SizedBox(
+        height: 58,
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: centered
               ? MainAxisAlignment.center
               : MainAxisAlignment.start,
           children: children,
         ),
+      );
+    }
+    return SizedBox(
+      height: 58,
+      child: Scrollbar(
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: centered
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
+            children: children,
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _GridLayer extends StatelessWidget {
