@@ -291,7 +291,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.palette_outlined));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Dark'));
+      // Theme choices are compact icon buttons; the visible label is exposed
+      // through the tooltip/semantics so the test matches the production UI.
+      await tester.tap(find.byTooltip('Dark'));
       await tester.pumpAndSettle();
       final ctx = tester.element(find.byType(KeyboardView));
       final kb = ctx.read<KeyboardController>();
