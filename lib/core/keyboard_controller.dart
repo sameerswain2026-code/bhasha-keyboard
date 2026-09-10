@@ -310,6 +310,8 @@ class KeyboardController extends ChangeNotifier {
   // ---- Theme ----
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
+  String _keyboardSkinId = 'aura';
+  String get keyboardSkinId => _keyboardSkinId;
 
   // ---- Feedback settings ----
   bool _hapticsEnabled = true;
@@ -747,6 +749,10 @@ class KeyboardController extends ChangeNotifier {
           orElse: () => ThemeMode.system,
         );
       }
+      final keyboardSkin = prefs.getString('keyboardSkin');
+      if (keyboardSkin != null && keyboardSkin.trim().isNotEmpty) {
+        _keyboardSkinId = keyboardSkin;
+      }
       _hapticsEnabled = prefs.getBool('haptics') ?? true;
       _soundEnabled = prefs.getBool('sound') ?? false;
       final micModeName = prefs.getString('micMode');
@@ -858,6 +864,8 @@ class KeyboardController extends ChangeNotifier {
                   orElse: () => ThemeMode.system,
                 );
               }
+            case 'keyboardSkin':
+              if (v is String && v.trim().isNotEmpty) _keyboardSkinId = v;
             case 'micMode':
               if (v is String) {
                 _micMode = MicMode.values.firstWhere(
@@ -1487,6 +1495,14 @@ class KeyboardController extends ChangeNotifier {
   void setThemeMode(ThemeMode m) {
     _themeMode = m;
     _persist('themeMode', m.name);
+    notifyListeners();
+  }
+
+  void setKeyboardSkin(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty || trimmed == _keyboardSkinId) return;
+    _keyboardSkinId = trimmed;
+    _persist('keyboardSkin', trimmed);
     notifyListeners();
   }
 

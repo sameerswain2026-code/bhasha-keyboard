@@ -42,7 +42,7 @@ DOCUMENT_PASSWORD_PEPPER
 
 The repository now contains `functions/drive-gateway` and `functions/ai-gateway` source scaffolding. Deploy them as authenticated Node.js 22 Appwrite Functions. The production document flow requires Functions for Google OAuth exchange and refresh, Drive file/folder metadata, unlink/revoke, document-password verification, and atomic failed-attempt locking. Document bytes must not be written to Appwrite Storage or the Bhasha backend. The Android client stores only references and metadata in the `document_links` collection.
 
-Create a private `google-drive-tokens` table with `userId`, `refreshToken`, and `updatedAt` columns before deploying `drive-gateway`. Enable document security but grant no client create/read/update/delete permissions: only the Function API key may access token rows. Store each refresh token encrypted with `GOOGLE_TOKEN_ENCRYPTION_SECRET`; never expose it to Flutter or log it. Set `GOOGLE_OAUTH_REDIRECT_URIS` to the exact comma-separated callback allowlist registered with Google.
+Create a private `google-drive-tokens` table with `userId`, `refreshToken`, and `updatedAt` columns before deploying `drive-gateway`. Enable document security but grant no client create/read/update/delete permissions: only the Function API key may access token rows. Store each refresh token encrypted with `GOOGLE_TOKEN_ENCRYPTION_SECRET`; never expose it to Flutter or log it. Set `GOOGLE_OAUTH_REDIRECT_URIS` to the exact comma-separated callback allowlist registered with Google. The `document-links` table must index `userId` and `driveFileId` (including the query combination used to prevent duplicate private AI-index references).
 
 ## Current repository status
 

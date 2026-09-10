@@ -14,9 +14,10 @@ class GeminiKeyPool {
       assert(keys.isNotEmpty);
 
   factory GeminiKeyPool.production() {
-    const configured = String.fromEnvironment('GEMINI_API_KEYS');
-    final keys = configured.split(',').map((key) => key.trim()).toList();
-    return GeminiKeyPool(keys.isEmpty ? [''] : keys);
+    // Compile-time provider credentials are recoverable from an APK. Public
+    // application code is intentionally unable to load one; tests and private
+    // tooling may still inject an explicit pool through the constructor.
+    return GeminiKeyPool(['']);
   }
 
   final List<String> _keys;

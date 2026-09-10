@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../config/cloud_config.dart';
 import '../engine/appwrite_document_repository.dart';
 import 'kb_theme.dart';
 import 'setup_flow_screen.dart';
@@ -35,6 +36,21 @@ class _WelcomeFlowScreenState extends State<WelcomeFlowScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _ambient.stop();
+      _ambient.value = .5;
+    } else if (!_ambient.isAnimating) {
+      _ambient.repeat(reverse: true);
+    }
+  }
+
+  Duration get _pageDuration => MediaQuery.disableAnimationsOf(context)
+      ? Duration.zero
+      : const Duration(milliseconds: 520);
+
+  @override
   void dispose() {
     _ambient.dispose();
     _pageController.dispose();
@@ -44,7 +60,7 @@ class _WelcomeFlowScreenState extends State<WelcomeFlowScreen>
   void _next() {
     if (_page < 2) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 520),
+        duration: _pageDuration,
         curve: Curves.easeOutCubic,
       );
     } else {
@@ -59,6 +75,14 @@ class _WelcomeFlowScreenState extends State<WelcomeFlowScreen>
     });
     try {
       await _cloud.signInWithGoogle();
+      if (CloudConfig.driveGatewayConfigured) {
+        try {
+          await _cloud.connectDrive();
+        } catch (_) {
+          // Account sign-in succeeded. Drive can be reconnected later from
+          // the dashboard without trapping the user in onboarding.
+        }
+      }
       if (mounted) widget.onFinished();
     } catch (error) {
       if (!mounted) return;
@@ -102,9 +126,10 @@ class _WelcomeFlowScreenState extends State<WelcomeFlowScreen>
                         onLogin: _login,
                         onSetup: () => Navigator.of(context).push(
                           PageRouteBuilder(
-                            transitionDuration: const Duration(
-                              milliseconds: 420,
-                            ),
+                            transitionDuration:
+                                MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : const Duration(milliseconds: 420),
                             pageBuilder: (_, animation, __) => FadeTransition(
                               opacity: animation,
                               child: SetupFlowScreen(
@@ -124,7 +149,7 @@ class _WelcomeFlowScreenState extends State<WelcomeFlowScreen>
                   onSkip: () {
                     _pageController.animateToPage(
                       2,
-                      duration: const Duration(milliseconds: 450),
+                      duration: _pageDuration,
                       curve: Curves.easeOutCubic,
                     );
                   },

@@ -8,13 +8,16 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:appwrite/models.dart' as models;
 
+import 'config/cloud_config.dart';
 import 'core/keyboard_controller.dart';
 import 'engine/appwrite_document_repository.dart';
 import 'engine/document_manager.dart';
 import 'engine/voice_factory.dart';
 import 'ime/android_platform.dart';
 import 'ime/ime_bridge.dart';
+import 'ui/drive_workspace_screen.dart';
 import 'ui/kb_theme.dart';
+import 'ui/keyboard_skin.dart';
 import 'ui/keyboard_view.dart';
 import 'ui/panels/documents_panel.dart';
 import 'ui/panels/settings_panel.dart';
@@ -35,6 +38,18 @@ void imeMain() {
   runApp(const BhashaImeApp());
 }
 
+ThemeData _appTheme(String skinId, Brightness brightness) {
+  final skin = KeyboardSkinCatalog.byId(skinId);
+  final keyboardTheme = skin.palette(brightness);
+  return ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorSchemeSeed: skin.seed,
+    scaffoldBackgroundColor: keyboardTheme.panelBg,
+    extensions: [keyboardTheme],
+  );
+}
+
 class BhashaKeyboardApp extends StatelessWidget {
   const BhashaKeyboardApp({super.key});
 
@@ -53,18 +68,8 @@ class BhashaKeyboardApp extends StatelessWidget {
             title: 'Bhasha Aura',
             debugShowCheckedModeBanner: false,
             themeMode: kb.themeMode,
-            theme: ThemeData(
-              useMaterial3: true,
-              brightness: Brightness.light,
-              colorSchemeSeed: const Color(0xFF6D5BFF),
-              scaffoldBackgroundColor: const Color(0xFFF7F8FA),
-            ),
-            darkTheme: ThemeData(
-              useMaterial3: true,
-              brightness: Brightness.dark,
-              colorSchemeSeed: const Color(0xFF40D9C2),
-              scaffoldBackgroundColor: const Color(0xFF121316),
-            ),
+            theme: _appTheme(kb.keyboardSkinId, Brightness.light),
+            darkTheme: _appTheme(kb.keyboardSkinId, Brightness.dark),
             home: const _AppHome(),
           );
         },
@@ -146,6 +151,7 @@ class CompanionDashboard extends StatefulWidget {
 class _CompanionDashboardState extends State<CompanionDashboard> {
   final _cloud = AppwriteDocumentRepository();
   late Future<models.User?> _user;
+  bool _accountBusy = false;
 
   @override
   void initState() {
@@ -155,6 +161,147 @@ class _CompanionDashboardState extends State<CompanionDashboard> {
 
   void _open(Widget page) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  Future<void> _signIn() async {
+    if (_accountBusy) return;
+    setState(() => _accountBusy = true);
+    try {
+      await _cloud.signInWithGoogle();
+      if (CloudConfig.driveGatewayConfigured) {
+        try {
+          await _cloud.connectDrive();
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Signed in, but Drive needs to be reconnected from the account menu.',
+                ),
+              ),
+            );
+          }
+        }
+      }
+      if (mounted) setState(() => _user = _cloud.currentUser());
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Google sign-in could not be completed. Please retry.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _accountBusy = false);
+    }
+  }
+
+  Future<void> _connectDrive() async {
+    if (_accountBusy) return;
+    setState(() => _accountBusy = true);
+    try {
+      await _cloud.connectDrive();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Drive connected.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Drive could not be connected. Sign out, then approve Google access again.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _accountBusy = false);
+    }
+  }
+
+  Future<void> _signOut() async {
+    if (_accountBusy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Disconnect cloud account?'),
+        content: const Text(
+          'Bhasha Aura will revoke its saved Drive connection and sign out. '
+          'Local keyboard settings remain on this device.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Disconnect'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _accountBusy = true);
+    try {
+      await _cloud.signOut();
+      if (mounted) setState(() => _user = Future.value(null));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not sign out. Please retry.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _accountBusy = false);
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    if (_accountBusy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Bhasha cloud account?'),
+        content: const Text(
+          'This permanently removes your Bhasha cloud account, linked-document metadata, saved Drive token and active sessions. Files in your Google Drive are not deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _accountBusy = true);
+    try {
+      await _cloud.deleteAccountAndCloudData();
+      if (mounted) setState(() => _user = Future.value(null));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Account deletion could not be completed. Please retry.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _accountBusy = false);
+    }
   }
 
   @override
@@ -199,10 +346,38 @@ class _CompanionDashboardState extends State<CompanionDashboard> {
                         ? 'Sign in to connect cloud documents'
                         : 'Google account connected',
                   ),
-                  trailing: Icon(
-                    user == null ? Icons.cloud_off : Icons.verified,
-                    color: user == null ? t.keyTextSecondary : t.accent,
-                  ),
+                  trailing: _accountBusy
+                      ? const SizedBox.square(
+                          dimension: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : user == null
+                      ? FilledButton(
+                          onPressed: _signIn,
+                          child: const Text('Connect'),
+                        )
+                      : PopupMenuButton<String>(
+                          tooltip: 'Account actions',
+                          onSelected: (value) {
+                            if (value == 'drive') _connectDrive();
+                            if (value == 'signOut') _signOut();
+                            if (value == 'delete') _deleteAccount();
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'drive',
+                              child: Text('Connect or refresh Drive'),
+                            ),
+                            PopupMenuItem(
+                              value: 'signOut',
+                              child: Text('Disconnect and sign out'),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete cloud account'),
+                            ),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -221,11 +396,76 @@ class _CompanionDashboardState extends State<CompanionDashboard> {
                 ),
               ),
               _DashboardAction(
+                icon: Icons.cloud_outlined,
+                title: 'Google Drive workspace',
+                subtitle: user == null
+                    ? 'Connect your account to browse authorized files'
+                    : CloudConfig.driveGatewayConfigured
+                    ? 'Browse, search and create authorized Drive items'
+                    : 'Cloud gateway is unavailable in this build',
+                onTap: user != null && CloudConfig.driveGatewayConfigured
+                    ? () => _open(DriveWorkspaceScreen(repository: _cloud))
+                    : () => ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            user == null
+                                ? 'Connect Google first.'
+                                : 'Drive is not configured in this build.',
+                          ),
+                        ),
+                      ),
+              ),
+              _DashboardAction(
                 icon: Icons.settings_outlined,
                 title: 'Keyboard settings',
                 subtitle: 'Languages, themes, privacy and setup',
                 onTap: () => _open(
                   const Scaffold(body: SafeArea(child: SettingsPanel())),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Connected features',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _StatusChip(
+                            label: 'AI tools',
+                            available: CloudConfig.aiGatewayConfigured,
+                          ),
+                          _StatusChip(
+                            label: 'Drive',
+                            available:
+                                user != null &&
+                                CloudConfig.driveGatewayConfigured,
+                          ),
+                          const _StatusChip(
+                            label: 'Offline typing',
+                            available: true,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Typed text stays local unless you explicitly use a connected AI, voice, translation or cloud action.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: t.keyTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -271,6 +511,29 @@ class _DashboardAction extends StatelessWidget {
   );
 }
 
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.available});
+
+  final String label;
+  final bool available;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = KbTheme.of(context);
+    return Semantics(
+      label: '$label ${available ? 'available' : 'unavailable'}',
+      child: Chip(
+        avatar: Icon(
+          available ? Icons.check_circle_outline : Icons.do_not_disturb_alt,
+          size: 16,
+          color: available ? t.accent : t.keyTextSecondary,
+        ),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
 class BhashaImeApp extends StatefulWidget {
   const BhashaImeApp({super.key});
 
@@ -311,16 +574,8 @@ class _BhashaImeAppState extends State<BhashaImeApp> {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             themeMode: kb.themeMode,
-            theme: ThemeData(
-              useMaterial3: true,
-              brightness: Brightness.light,
-              colorSchemeSeed: const Color(0xFF1A73E8),
-            ),
-            darkTheme: ThemeData(
-              useMaterial3: true,
-              brightness: Brightness.dark,
-              colorSchemeSeed: const Color(0xFF8AB4F8),
-            ),
+            theme: _appTheme(kb.keyboardSkinId, Brightness.light),
+            darkTheme: _appTheme(kb.keyboardSkinId, Brightness.dark),
             home: const Scaffold(
               backgroundColor: Colors.transparent,
               body: Align(

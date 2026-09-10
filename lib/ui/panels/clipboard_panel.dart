@@ -11,6 +11,33 @@ import 'panel_mini_keyboard.dart';
 class ClipboardPanel extends StatelessWidget {
   const ClipboardPanel({super.key});
 
+  Future<void> _confirmClear(
+    BuildContext context,
+    KeyboardController keyboard,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear clipboard history?'),
+        content: const Text(
+          'Saved clipboard entries will be removed from this device. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) keyboard.clearClipboardHistory();
+  }
+
   @override
   Widget build(BuildContext context) {
     final kb = context.watch<KeyboardController>();
@@ -48,7 +75,7 @@ class ClipboardPanel extends StatelessWidget {
                   IconButton(
                     tooltip: 'Clear history',
                     icon: Icon(Icons.delete_outline, size: 17, color: t.icon),
-                    onPressed: kb.clearClipboardHistory,
+                    onPressed: () => _confirmClear(context, kb),
                   ),
               ],
             ),

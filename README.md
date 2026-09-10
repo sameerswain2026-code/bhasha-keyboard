@@ -10,9 +10,10 @@ Bhasha Keyboard is a Flutter-based Android Input Method Editor (IME) for multili
 | --- | --- |
 | Languages | 22 Indian-language packs with native layouts and transliteration |
 | Input | System-wide IME, cursor-aware editing, selection replacement, editor actions |
-| Productivity | Suggestions, clipboard panel, emoji, stickers, GIF panel, resize and theme controls |
-| Accessibility | Voice typing, text-to-speech for selected text, dark theme |
-| Integrations | Optional Gemini, Sarvam and Tavily integrations through an authenticated backend gateway |
+| Productivity | Suggestions, clipboard panel, emoji, stickers, GIF panel, resize and 30 persisted keyboard skins |
+| Accessibility | Voice typing, text-to-speech for selected text, contrast-aware themes, reduced-motion support |
+| Documents | Local linking plus an authenticated Drive workspace for authorized metadata, folders and documents |
+| Integrations | Optional Gemini/Tavily gateway routing; Sarvam streaming remains disabled until an authenticated relay is configured |
 
 ## Requirements
 

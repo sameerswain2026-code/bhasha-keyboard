@@ -78,6 +78,8 @@ class TavilySearchService {
       return response == null ? null : _parseResult(jsonEncode(response));
     }
 
+    if (_pool.current.isEmpty) return null;
+
     for (var attempt = 0; attempt < _pool.length; attempt++) {
       final key = _pool.current;
       try {

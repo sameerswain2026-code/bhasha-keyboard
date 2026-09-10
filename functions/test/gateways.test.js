@@ -76,6 +76,7 @@ test('Drive input validation rejects malformed and oversized requests', () => {
   assert.throws(() => drive.body(request('x'.repeat(32769))), (error) => error.message === 'REQUEST_TOO_LARGE');
   assert.throws(() => drive.validId('../secret'), (error) => error.message === 'INVALID_FILE_ID');
   assert.equal(drive.validId('file_Id-123'), 'file_Id-123');
+  assert.equal(drive.driveQueryLiteral("parent\\'id"), "parent\\\\\\'id");
 });
 
 test('Drive OAuth redirect URI must be explicitly allowlisted', () => {

@@ -2,8 +2,8 @@
   "private": true,
   "engines": { "node": ">=22" },
   "dependencies": {
-    "@googleapis/drive": "^15.0.0",
-    "google-auth-library": "^10.5.0",
+    "@googleapis/drive": "^22.0.0",
+    "google-auth-library": "^11.0.2",
     "node-appwrite": "^14.1.0"
   }
 }

@@ -6,7 +6,7 @@ These Functions are the production security boundary for Google Drive and AI pro
 
 | Directory | Purpose |
 |---|---|
-| `drive-gateway` | Authenticated Google OAuth code exchange, token refresh, Drive metadata/folder operations, unlink/revoke, and document-link metadata access. It never returns document bytes. |
+| `drive-gateway` | Authenticated Google/Appwrite session connection, optional OAuth code exchange, Drive browse/search/metadata/folder/document operations, unlink/revoke, and confirmed account deletion. It never returns document bytes. |
 | `ai-gateway` | Authenticated proxy for Gemini, Sarvam, and Tavily. Provider credentials stay in Function environment variables. |
 
 ## Required environment variables

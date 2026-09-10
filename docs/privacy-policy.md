@@ -34,7 +34,7 @@ Bhasha Keyboard is a utility application and does not use personal information f
 
 ## User choices and deletion
 
-Users can deny microphone permission, disable haptics and optional features, clear clipboard history, unlink documents, sign out of connected services where supported, and uninstall the application. Requests handled directly by third-party providers may need to be deleted through those providers under their own policies.
+Users can deny microphone permission, disable haptics and optional features, clear clipboard history, unlink documents, disconnect Google Drive, sign out, or permanently delete their Bhasha cloud account and linked-document metadata from the companion dashboard. Deleting the Bhasha account does not delete files in the user's Google Drive. See the [account deletion instructions](delete-account.html). Requests handled directly by third-party providers may need to be deleted through those providers under their own policies.
 
 ## Contact
 

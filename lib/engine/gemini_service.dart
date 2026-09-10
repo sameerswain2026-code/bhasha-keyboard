@@ -232,6 +232,10 @@ class GeminiService {
       return jsonMode ? jsonDecode(_stripCodeFence(text)) : text;
     }
 
+    if (_pool.current.isEmpty) {
+      throw StateError('Gemini gateway is not configured');
+    }
+
     for (var attempt = 0; attempt < _pool.length; attempt++) {
       final key = _pool.current;
       final body = <String, dynamic>{

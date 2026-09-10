@@ -413,18 +413,9 @@ Manual stop, key interaction, or silence timeout ends session
 
 A key interaction during voice typing uses an immediate cancellation path. The latest partial transcript is committed synchronously before the key is inserted, while provider shutdown continues asynchronously. This avoids blocking a key tap on a network flush window and prevents late voice callbacks from inserting text at a stale caret position.
 
-## 8.5 Build-Time Provider Configuration
+## 8.5 Server-Side Provider Configuration
 
-Provider credentials are supplied through Dart compile-time defines. The source repository contains no live credentials. A private testing build may use commands similar to the following:
-
-```bash
-flutter build apk --release \
-  --dart-define="SARVAM_API_KEYS=key1,key2" \
-  --dart-define="GEMINI_API_KEYS=key1" \
-  --dart-define="TAVILY_API_KEYS=key1,key2"
-```
-
-The final academic report intentionally does not include real provider keys. A client APK containing compile-time keys must be treated as a private testing artifact because reverse engineering can expose embedded credentials.
+Provider credentials are never accepted through Flutter compile-time defines because reverse engineering can recover values embedded in an APK. Gemini and Tavily requests use the authenticated Appwrite AI gateway configured by the public `APPWRITE_AI_GATEWAY_FUNCTION_ID`. Sarvam streaming remains disabled in public builds until a WebSocket-capable authenticated relay is deployed. Provider keys belong only in the server Function environment; tests may inject fake key pools without creating a release artifact.
 
 ---
 
