@@ -147,7 +147,30 @@ class _ManualTranslatePanelState extends State<ManualTranslatePanel> {
           ),
           const SizedBox(height: 5),
           if (kb.panelKeyboardActive)
-            Expanded(child: const PanelMiniKeyboard())
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 34, maxHeight: 42),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: t.keyBg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: t.accent),
+                    ),
+                    child: Text(
+                      input.isEmpty ? 'Type source text…' : input,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: t.keyText),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Expanded(child: PanelMiniKeyboard(compact: true)),
+                ],
+              ),
+            )
           else ...[
             GestureDetector(
               onTap: () => kb.openPanelKeyboard(initialText: input),

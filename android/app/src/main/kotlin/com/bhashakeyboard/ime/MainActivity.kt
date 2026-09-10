@@ -74,12 +74,25 @@ class MainActivity : FlutterActivity() {
         micStream = MicStreamHandler()
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "bhasha/mic").setStreamHandler(micStream)
         handleImeIntent(intent)
+        handleMicPermissionIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleImeIntent(intent)
+        handleMicPermissionIntent(intent)
+    }
+
+    private fun handleMicPermissionIntent(intent: Intent?) {
+        if (intent?.action != "com.bhashakeyboard.REQUEST_MIC_PERMISSION") return
+        if (!hasMic()) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                7001,
+            )
+        }
     }
 
     private fun handleImeIntent(intent: Intent?) {

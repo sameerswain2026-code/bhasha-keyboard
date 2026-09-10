@@ -231,7 +231,15 @@ class BhashaImeService : InputMethodService() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "hasMicPermission" -> result.success(hasMic())
-                "requestMicPermission" -> result.success(hasMic())
+                "requestMicPermission" -> {
+                    if (!hasMic()) {
+                        startActivity(Intent(this, MainActivity::class.java).apply {
+                            action = "com.bhashakeyboard.REQUEST_MIC_PERMISSION"
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        })
+                    }
+                    result.success(hasMic())
+                }
                 "startMic" -> {
                     if (hasMic()) {
                         micStream?.startRecording()

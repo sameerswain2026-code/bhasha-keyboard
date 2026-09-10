@@ -867,7 +867,7 @@ class _AlphaLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layout = layoutFor(kb.language, kb.scriptMode);
+    final layout = layoutPageFor(kb.language, kb.scriptMode, kb.nativePage);
     final isLatin = layout == kQwerty;
     final shiftActive = kb.shift != ShiftState.off;
 
@@ -882,7 +882,7 @@ class _AlphaLayer extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ScrollableKeyRow(
+          Row(
             children: [
               for (final c in layout.rows[0])
                 KeyWidget(
@@ -893,8 +893,7 @@ class _AlphaLayer extends StatelessWidget {
                 ),
             ],
           ),
-          _ScrollableKeyRow(
-            centered: true,
+          Row(
             children: [
               for (final c in layout.rows[1])
                 KeyWidget(
@@ -922,21 +921,13 @@ class _AlphaLayer extends StatelessWidget {
                 },
               ),
               Expanded(
-                child: _ScrollableKeyRow(
-                  fixedWidth: true,
+                child: Row(
                   children: [
                     for (final c in layout.rows[2])
                       KeyWidget(
                         label: display(c),
                         fontSize: fontSize,
                         flex: 2,
-                        // The bottom alphabet row is nested between Shift and
-                        // Backspace. Fixed-width keys inside a horizontal
-                        // scroller remain usable even when the IME window is
-                        // temporarily narrow (one-handed mode, insets, or a
-                        // vendor-resized IME); flex children otherwise shrink
-                        // into each other and become visually unreadable.
-                        expand: false,
                         heightScale: scale,
                         onTap: () => _key(c),
                       ),
@@ -1138,6 +1129,7 @@ class _BottomRow extends StatelessWidget {
     final isAlpha = kb.layer == KeyboardLayer.alpha;
     final canToggleScript =
         kb.language.supportsNative && kb.language.supportsRoman;
+    final nativePages = nativePageCount(kb.language, kb.scriptMode);
     final scale = kb.sizeScale;
 
     return Row(
@@ -1153,6 +1145,16 @@ class _BottomRow extends StatelessWidget {
             kb.setLayer(isAlpha ? KeyboardLayer.numeric : KeyboardLayer.alpha);
           },
         ),
+        if (isAlpha && kb.scriptMode == ScriptMode.native && nativePages > 1)
+          KeyWidget(
+            label: '${kb.nativePage + 1}/$nativePages',
+            special: true,
+            fontSize: 12,
+            flex: 2,
+            heightScale: scale,
+            onTap: kb.nextNativePage,
+            onLongPressStart: kb.previousNativePage,
+          ),
         // Script-toggle / globe key: tap switches Native<->Roman when the
         // typing language supports both (else types a comma); long-press
         // ALWAYS opens the general typing-language selector - Gboard's

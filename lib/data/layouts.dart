@@ -293,6 +293,14 @@ const Map<String, String> kCompleteNativeInventories = {
       'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
   'sa':
       'अआइईउऊऋॠऌॡएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृॄेैोौ।॥',
+  'mai':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
+  'kok':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
+  'doi':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
+  'brx':
+      'अआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहळक्षत्रज्ञंःँ़्ािीुूृेैोौं।॥',
   'bn': 'অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎংঃঁ়্ািীুূৃেৈোৌ।॥',
   'as': 'অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযৰলশষসহড়ঢ়য়ৎংঃঁ়্ািীুূৃেৈোৌ।॥',
   'gu': 'અઆઇઈઉઊઋએઐઓઔકખગઘઙચછજઝઞટઠડઢણતથદધનપફબભમયરલવશષસહળક્ષજ્ઞંઃઁ્ાિીુૂૃેૈોૌ।',
@@ -321,6 +329,43 @@ LayoutRows _completeInventory(String inventory) {
     characters.take(rowSize).toList(),
     characters.skip(rowSize).take(rowSize).toList(),
     characters.skip(rowSize * 2).toList(),
+  ]);
+}
+
+/// Native pages use the same practical geometry as a phone keyboard: ten
+/// keys, nine keys, and seven keys beside Shift/Backspace. This keeps every
+/// key readable instead of squeezing an entire script into three scrolling
+/// rows. The full inventory remains available through page navigation.
+const int _nativePageCapacity = 26;
+
+List<String> _inventoryCharacters(String inventory) => inventory.runes
+    .map(String.fromCharCode)
+    .where((character) => character.trim().isNotEmpty)
+    .toSet()
+    .toList(growable: false);
+
+int nativePageCount(LanguagePack pack, ScriptMode mode) {
+  if (pack.isLatin || mode == ScriptMode.roman) return 1;
+  final inventory = kCompleteNativeInventories[pack.id];
+  if (inventory == null) return 1;
+  final count = _inventoryCharacters(inventory).length;
+  return (count / _nativePageCapacity).ceil().clamp(1, 99).toInt();
+}
+
+LayoutRows layoutPageFor(LanguagePack pack, ScriptMode mode, int page) {
+  if (pack.isLatin || mode == ScriptMode.roman) return kQwerty;
+  final inventory = kCompleteNativeInventories[pack.id];
+  if (inventory == null) return kNativeLayouts[pack.id] ?? kDevanagariFallback;
+  final characters = _inventoryCharacters(inventory);
+  final start = page
+          .clamp(0, nativePageCount(pack, mode) - 1)
+          .toInt() *
+      _nativePageCapacity;
+  final slice = characters.skip(start).take(_nativePageCapacity).toList();
+  return LayoutRows([
+    slice.take(10).toList(),
+    slice.skip(10).take(9).toList(),
+    slice.skip(19).take(7).toList(),
   ]);
 }
 

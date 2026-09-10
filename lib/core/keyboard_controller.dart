@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/languages.dart';
+import '../data/layouts.dart';
 import '../engine/ai_assistant_engine.dart';
 import '../engine/ai_command_capture.dart';
 import '../engine/document_manager.dart';
@@ -288,6 +289,23 @@ class KeyboardController extends ChangeNotifier {
   // ---- Layout / shift ----
   KeyboardLayer _layer = KeyboardLayer.alpha;
   KeyboardLayer get layer => _layer;
+
+  /// Page within the complete native-script inventory. Latin QWERTY and
+  /// numeric/symbol layers always use page zero.
+  int _nativePage = 0;
+  int get nativePage => _nativePage;
+
+  void setNativePage(int page) {
+    final maxPage = nativePageCount(_language, _scriptMode);
+    final next = page.clamp(0, maxPage - 1);
+    if (_nativePage == next) return;
+    _feedback();
+    _nativePage = next;
+    notifyListeners();
+  }
+
+  void nextNativePage() => setNativePage(_nativePage + 1);
+  void previousNativePage() => setNativePage(_nativePage - 1);
 
   ShiftState _shift = ShiftState.off;
   ShiftState get shift => _shift;
@@ -1419,6 +1437,7 @@ class KeyboardController extends ChangeNotifier {
     _commitComposing();
     _lastCommittedWord = '';
     _language = pack;
+    _nativePage = 0;
     if (!pack.supportsNative) {
       _scriptMode = ScriptMode.roman;
     } else if (!pack.supportsRoman) {
@@ -1439,6 +1458,7 @@ class KeyboardController extends ChangeNotifier {
     if (mode == ScriptMode.roman && !_language.supportsRoman) return;
     _commitComposing();
     _scriptMode = mode;
+    _nativePage = 0;
     voice.setScriptMode(mode);
     _persist('scriptMode', mode.name);
     _updateSuggestions();
@@ -1484,6 +1504,7 @@ class KeyboardController extends ChangeNotifier {
     _panelKeyboardActive = false;
     _panelInputText = '';
     _layer = KeyboardLayer.alpha;
+    _nativePage = 0;
     _shift = ShiftState.off;
     notifyListeners();
   }
