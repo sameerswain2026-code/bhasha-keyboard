@@ -23,6 +23,18 @@ jobs:
       - run: flutter analyze
       - run: flutter test --coverage
       - run: flutter build apk --debug
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Validate backend gateways
+        working-directory: functions
+        run: |
+          npm ci
+          npm run check
+          npm test
+          npm audit --omit=dev --audit-level=moderate
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
