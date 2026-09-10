@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/cloud_config.dart';
 import '../../core/keyboard_controller.dart';
 import '../../engine/voice_engine.dart';
 import '../../ime/setup_helper.dart';
@@ -255,6 +256,53 @@ class SettingsPanel extends StatelessWidget {
                 ],
                 ListTile(
                   dense: true,
+                  leading: Icon(
+                    Icons.palette_outlined,
+                    size: 18,
+                    color: t.accent,
+                  ),
+                  title: Text(
+                    'Keyboard skins',
+                    style: TextStyle(fontSize: 13, color: t.keyText),
+                  ),
+                  subtitle: Text(
+                    'Choose from 30 accessible color themes',
+                    style: TextStyle(fontSize: 11, color: t.keyTextSecondary),
+                  ),
+                  trailing: Icon(Icons.chevron_right, size: 16, color: t.icon),
+                  onTap: () => kb.togglePanel(ActivePanel.theme),
+                ),
+                ListTile(
+                  dense: true,
+                  leading: Icon(
+                    Icons.shield_outlined,
+                    size: 18,
+                    color: t.accent,
+                  ),
+                  title: Text(
+                    'Privacy and connected features',
+                    style: TextStyle(fontSize: 13, color: t.keyText),
+                  ),
+                  subtitle: Text(
+                    'AI: ${CloudConfig.aiGatewayConfigured ? 'available' : 'off'} · '
+                    'Drive: ${CloudConfig.driveGatewayConfigured ? 'available' : 'off'}',
+                    style: TextStyle(fontSize: 11, color: t.keyTextSecondary),
+                  ),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (context) => const AlertDialog(
+                      title: Text('Your privacy controls'),
+                      content: Text(
+                        'Normal typing, local suggestions, emoji and themes stay on this device. '
+                        'Text, audio or document metadata leaves the device only after you explicitly use an AI, voice, translation or cloud action. '
+                        'Provider credentials are kept in authenticated server functions, never in the keyboard app.',
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 12),
+                ListTile(
+                  dense: true,
                   leading: Icon(Icons.mic_outlined, size: 18, color: t.accent),
                   title: Text(
                     'Mic mode',
@@ -427,8 +475,8 @@ class SettingsPanel extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(10),
                   child: Text(
-                    'Bhasha Keyboard v1.0\n'
-                    '22 Indian languages · Native & Roman input · Real-time voice typing (Sarvam AI)\n'
+                    'Bhasha Aura v1.1\n'
+                    '22 Indian languages · Native & Roman input · Optional connected voice typing\n'
                     'Offline-first: typing, emoji and suggestions work without internet.\n'
                     'Microphone is used only for voice typing.',
                     style: TextStyle(

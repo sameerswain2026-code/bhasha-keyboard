@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -65,7 +66,9 @@ class BhashaImeService : InputMethodService() {
     private var keyboardRoot: FrameLayout? = null
     private var keyboardScale = 1.0f
     private var pendingDocumentAuth: MethodChannel.Result? = null
+    private var pendingDocumentPick: MethodChannel.Result? = null
     private var documentAuthReceiver: BroadcastReceiver? = null
+    private var documentPickReceiver: BroadcastReceiver? = null
 
     /// Set true immediately before WE mutate the host's text via
     /// applyDiff/deleteHostSelection, cleared the moment the resulting
@@ -256,6 +259,15 @@ class BhashaImeService : InputMethodService() {
                         result.success(false)
                     }
                 }
+                "keyClick" -> {
+                    try {
+                        val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                        audio?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        result.success(false)
+                    }
+                }
                 "isImeEnabled", "isImeSelected" -> result.success(true)
                 else -> result.notImplemented()
             }
@@ -270,6 +282,13 @@ class BhashaImeService : InputMethodService() {
             engine.dartExecutor.binaryMessenger, "bhasha/documents"
         ).setMethodCallHandler { call, result ->
             when (call.method) {
+                "pickDocument" -> {
+                    pendingDocumentPick = result
+                    startActivity(Intent(this, MainActivity::class.java).apply {
+                        action = "com.bhashakeyboard.OPEN_DOCUMENT_PICKER"
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    })
+                }
                 "authenticateDocument" -> {
                     pendingDocumentAuth = result
                     startActivity(Intent(this, DocumentAuthActivity::class.java).apply {
@@ -366,6 +385,25 @@ class BhashaImeService : InputMethodService() {
             }
         }
         registerReceiver(documentAuthReceiver, IntentFilter("com.bhashakeyboard.DOCUMENT_AUTH"), RECEIVER_NOT_EXPORTED)
+
+        documentPickReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val uri = intent?.getStringExtra("uri")
+                if (uri.isNullOrEmpty()) {
+                    pendingDocumentPick?.success(null)
+                } else {
+                    pendingDocumentPick?.success(
+                        mapOf(
+                            "uri" to uri,
+                            "displayName" to (intent?.getStringExtra("displayName") ?: "Document"),
+                            "mimeType" to (intent?.getStringExtra("mimeType") ?: "application/octet-stream"),
+                        )
+                    )
+                }
+                pendingDocumentPick = null
+            }
+        }
+        registerReceiver(documentPickReceiver, IntentFilter("com.bhashakeyboard.DOCUMENT_PICK"), RECEIVER_NOT_EXPORTED)
 
         // Watch the SYSTEM clipboard (not just our own copy button) so
         // that copying text in ANY app (long-press -> Copy in WhatsApp,
@@ -578,6 +616,8 @@ class BhashaImeService : InputMethodService() {
     override fun onDestroy() {
         documentAuthReceiver?.let { runCatching { unregisterReceiver(it) } }
         documentAuthReceiver = null
+        documentPickReceiver?.let { runCatching { unregisterReceiver(it) } }
+        documentPickReceiver = null
         pendingDocumentAuth?.error("SERVICE_STOPPED", "Keyboard service stopped", null)
         pendingDocumentAuth = null
         clipListener?.let { clipboardManager?.removePrimaryClipChangedListener(it) }

@@ -7,9 +7,20 @@ import '../config/cloud_config.dart';
 
 /// Calls an Appwrite Function without exposing provider credentials to Flutter.
 /// The Function receives the user's existing Appwrite session automatically.
+class GatewayException implements Exception {
+  const GatewayException(this.code, {this.statusCode});
+
+  final String code;
+  final int? statusCode;
+
+  @override
+  String toString() =>
+      'GatewayException($code${statusCode == null ? '' : ', $statusCode'})';
+}
+
 class AppwriteGatewayClient {
   AppwriteGatewayClient({Client? client})
-      : _functions = Functions(client ?? _newClient());
+    : _functions = Functions(client ?? _newClient());
 
   static Client _newClient() => Client()
     ..setEndpoint(CloudConfig.endpoint)
@@ -40,6 +51,13 @@ class AppwriteGatewayClient {
       throw StateError('AI gateway execution did not complete');
     }
     final decoded = jsonDecode(result.responseBody);
+    if (decoded is Map &&
+        (result.responseStatusCode < 200 || result.responseStatusCode >= 300)) {
+      throw GatewayException(
+        decoded['error']?.toString() ?? 'AI_GATEWAY_FAILED',
+        statusCode: result.responseStatusCode,
+      );
+    }
     if (decoded is! Map || decoded['data'] is! Map) {
       throw const FormatException('AI gateway returned an invalid response');
     }
@@ -66,6 +84,12 @@ class AppwriteGatewayClient {
     final decoded = jsonDecode(result.responseBody);
     if (decoded is! Map) {
       throw const FormatException('Drive gateway returned an invalid response');
+    }
+    if (result.responseStatusCode < 200 || result.responseStatusCode >= 300) {
+      throw GatewayException(
+        decoded['error']?.toString() ?? 'DRIVE_GATEWAY_FAILED',
+        statusCode: result.responseStatusCode,
+      );
     }
     final data = decoded['data'];
     return Map<String, dynamic>.from(data is Map ? data : decoded);

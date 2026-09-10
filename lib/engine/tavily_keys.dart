@@ -20,9 +20,9 @@ class TavilyKeyPool {
       assert(keys.isNotEmpty);
 
   factory TavilyKeyPool.production() {
-    const configured = String.fromEnvironment('TAVILY_API_KEYS');
-    final keys = configured.split(',').map((key) => key.trim()).toList();
-    return TavilyKeyPool(keys.isEmpty ? [''] : keys);
+    // Production search is gateway-only. Keeping this empty prevents an
+    // accidental release build from embedding a recoverable provider key.
+    return TavilyKeyPool(['']);
   }
 
   final List<String> _keys;

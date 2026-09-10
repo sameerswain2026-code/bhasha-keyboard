@@ -68,11 +68,11 @@ class GeminiService {
     GeminiKeyPool? keyPool,
     http.Client? client,
     AppwriteGatewayClient? gateway,
-  })
-    : _pool = keyPool ?? GeminiKeyPool.production(),
-      _client = client ?? http.Client(),
-      _gateway = gateway ??
-          (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
+  }) : _pool = keyPool ?? GeminiKeyPool.production(),
+       _client = client ?? http.Client(),
+       _gateway =
+           gateway ??
+           (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
 
   static const String _model = 'gemini-3.1-flash-lite';
   static const String _endpoint =
@@ -230,6 +230,10 @@ class GeminiService {
       final text = _extractText(jsonEncode(response));
       if (text == null) throw const FormatException('Gemini gateway: no text');
       return jsonMode ? jsonDecode(_stripCodeFence(text)) : text;
+    }
+
+    if (_pool.current.isEmpty) {
+      throw StateError('Gemini gateway is not configured');
     }
 
     for (var attempt = 0; attempt < _pool.length; attempt++) {

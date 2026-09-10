@@ -20,9 +20,9 @@ class SarvamKeyPool {
       assert(keys.isNotEmpty);
 
   factory SarvamKeyPool.production() {
-    const configured = String.fromEnvironment('SARVAM_API_KEYS');
-    final keys = configured.split(',').map((key) => key.trim()).toList();
-    return SarvamKeyPool(keys.isEmpty ? [''] : keys);
+    // Never read a provider credential from a Flutter build define. Streaming
+    // stays unavailable until a WebSocket-capable authenticated relay exists.
+    return SarvamKeyPool(['']);
   }
 
   final List<String> _keys;

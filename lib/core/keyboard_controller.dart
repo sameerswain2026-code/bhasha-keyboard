@@ -310,6 +310,8 @@ class KeyboardController extends ChangeNotifier {
   // ---- Theme ----
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
+  String _keyboardSkinId = 'aura';
+  String get keyboardSkinId => _keyboardSkinId;
 
   // ---- Feedback settings ----
   bool _hapticsEnabled = true;
@@ -747,6 +749,10 @@ class KeyboardController extends ChangeNotifier {
           orElse: () => ThemeMode.system,
         );
       }
+      final keyboardSkin = prefs.getString('keyboardSkin');
+      if (keyboardSkin != null && keyboardSkin.trim().isNotEmpty) {
+        _keyboardSkinId = keyboardSkin;
+      }
       _hapticsEnabled = prefs.getBool('haptics') ?? true;
       _soundEnabled = prefs.getBool('sound') ?? false;
       final micModeName = prefs.getString('micMode');
@@ -858,6 +864,8 @@ class KeyboardController extends ChangeNotifier {
                   orElse: () => ThemeMode.system,
                 );
               }
+            case 'keyboardSkin':
+              if (v is String && v.trim().isNotEmpty) _keyboardSkinId = v;
             case 'micMode':
               if (v is String) {
                 _micMode = MicMode.values.firstWhere(
@@ -1490,6 +1498,14 @@ class KeyboardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setKeyboardSkin(String id) {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty || trimmed == _keyboardSkinId) return;
+    _keyboardSkinId = trimmed;
+    _persist('keyboardSkin', trimmed);
+    notifyListeners();
+  }
+
   void setHaptics(bool v) {
     _hapticsEnabled = v;
     _persist('haptics', v);
@@ -1505,25 +1521,33 @@ class KeyboardController extends ChangeNotifier {
   void _feedback() {
     if (_hapticsEnabled) {
       final now = DateTime.now();
-      if (_lastHapticAt != null &&
-          now.difference(_lastHapticAt!) < const Duration(milliseconds: 22)) {
-        return;
+      final hapticThrottled =
+          _lastHapticAt != null &&
+          now.difference(_lastHapticAt!) < const Duration(milliseconds: 22);
+      if (!hapticThrottled) {
+        _lastHapticAt = now;
+        try {
+          unawaited(
+            _systemChannel
+                .invokeMethod<void>('haptic', <String, dynamic>{
+                  'durationMs': 8,
+                  'amplitude': 38,
+                })
+                .catchError((_) {}),
+          );
+        } catch (_) {}
       }
-      _lastHapticAt = now;
-      try {
-        unawaited(
-          _systemChannel
-              .invokeMethod<void>('haptic', <String, dynamic>{
-                'durationMs': 8,
-                'amplitude': 38,
-              })
-              .catchError((_) {}),
-        );
-      } catch (_) {}
     }
     if (_soundEnabled) {
       try {
-        SystemSound.play(SystemSoundType.click);
+        // SystemSound is unreliable from an IME window on some Android
+        // vendors. The native IME channel uses AudioManager directly, with
+        // Flutter's SystemSound retained as the preview/test fallback.
+        unawaited(
+          _systemChannel.invokeMethod<void>('keyClick').catchError((_) {
+            return SystemSound.play(SystemSoundType.click);
+          }),
+        );
       } catch (_) {}
     }
   }

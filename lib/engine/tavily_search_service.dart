@@ -42,11 +42,11 @@ class TavilySearchService {
     TavilyKeyPool? keyPool,
     http.Client? client,
     AppwriteGatewayClient? gateway,
-  })
-    : _pool = keyPool ?? TavilyKeyPool.production(),
-      _client = client ?? http.Client(),
-      _gateway = gateway ??
-          (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
+  }) : _pool = keyPool ?? TavilyKeyPool.production(),
+       _client = client ?? http.Client(),
+       _gateway =
+           gateway ??
+           (CloudConfig.aiGatewayConfigured ? AppwriteGatewayClient() : null);
 
   static const String _endpoint = 'https://api.tavily.com/search';
   static const Duration _timeout = Duration(seconds: 8);
@@ -77,6 +77,8 @@ class TavilySearchService {
       );
       return response == null ? null : _parseResult(jsonEncode(response));
     }
+
+    if (_pool.current.isEmpty) return null;
 
     for (var attempt = 0; attempt < _pool.length; attempt++) {
       final key = _pool.current;

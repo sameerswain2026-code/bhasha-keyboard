@@ -6,14 +6,16 @@ These Functions are the production security boundary for Google Drive and AI pro
 
 | Directory | Purpose |
 |---|---|
-| `drive-gateway` | Authenticated Google OAuth code exchange, token refresh, Drive metadata/folder operations, unlink/revoke, and document-link metadata access. It never returns document bytes. |
+| `drive-gateway` | Authenticated Google/Appwrite session connection, optional OAuth code exchange, Drive browse/search/metadata/folder/document operations, unlink/revoke, and confirmed account deletion. It never returns document bytes. |
 | `ai-gateway` | Authenticated proxy for Gemini, Sarvam, and Tavily. Provider credentials stay in Function environment variables. |
 
 ## Required environment variables
 
 `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_TOKEN_ENCRYPTION_SECRET`, `GEMINI_API_KEYS`, `SARVAM_API_KEYS`, and `TAVILY_API_KEYS` belong only in Appwrite Function variables. `GOOGLE_TOKEN_ENCRYPTION_SECRET` must be a randomly generated 32-byte key encoded as base64.
 
-The Functions expect the Appwrite user JWT in `x-appwrite-user-jwt`. They use the JWT to establish the caller identity and reject unauthenticated requests. Configure execution permissions so only authenticated users can invoke them.
+The Drive Function also requires `GOOGLE_OAUTH_REDIRECT_URIS` for code exchange. Set it to a comma-separated allowlist of the exact callback URI(s) registered with Google; caller-selected redirect URIs are rejected. Optional variables are `APPWRITE_DATABASE_ID`, `APPWRITE_DRIVE_TOKENS_COLLECTION_ID`, `GEMINI_ALLOWED_MODELS` (comma-separated, defaults to `gemini-2.5-flash-lite`), and `SARVAM_ALLOWED_HOSTS` (defaults to `api.sarvam.ai`).
+
+The Functions expect the Appwrite user JWT in `x-appwrite-user-jwt`. They use the JWT to establish the caller identity and reject unauthenticated requests. Configure execution permissions so only authenticated users can invoke them. The `google-drive-tokens` collection must have document security enabled and no client create/read/update/delete permissions; token rows are intentionally accessible only through the Drive Function's API key.
 
 ## Deployment
 
