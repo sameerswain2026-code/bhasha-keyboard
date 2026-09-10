@@ -1,91 +1,195 @@
+'use strict';
+
 const crypto = require('node:crypto');
-const { Client, Account, Databases, ID, Query } = require('node-appwrite');
+const { Client, Account, Databases } = require('node-appwrite');
 const { google } = require('@googleapis/drive');
 const { OAuth2Client } = require('google-auth-library');
 
-const required = ['APPWRITE_ENDPOINT', 'APPWRITE_PROJECT_ID', 'APPWRITE_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_TOKEN_ENCRYPTION_SECRET'];
-for (const name of required) if (!process.env[name]) throw new Error(`Missing Function variable: ${name}`);
+const MAX_REQUEST_BYTES = 32 * 1024;
+const required = [
+  'APPWRITE_ENDPOINT',
+  'APPWRITE_PROJECT_ID',
+  'APPWRITE_API_KEY',
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'GOOGLE_TOKEN_ENCRYPTION_SECRET',
+];
 
-const dbId = process.env.APPWRITE_DATABASE_ID || 'bhasha-db';
-const tableId = process.env.APPWRITE_DOCUMENT_LINKS_COLLECTION_ID || 'document-links';
-const key = Buffer.from(process.env.GOOGLE_TOKEN_ENCRYPTION_SECRET, 'base64');
-if (key.length !== 32) throw new Error('GOOGLE_TOKEN_ENCRYPTION_SECRET must decode to 32 bytes');
-
-function json(res, status, body) { return res.json(body, status); }
-function body(req) { return typeof req.bodyJson === 'object' && req.bodyJson ? req.bodyJson : JSON.parse(req.body || '{}'); }
-function clientForJwt(jwt) {
-  return new Client().setEndpoint(process.env.APPWRITE_ENDPOINT).setProject(process.env.APPWRITE_PROJECT_ID).setKey(process.env.APPWRITE_API_KEY).setJWT(jwt);
+function validateEnvironment() {
+  for (const name of required) {
+    if (!process.env[name]) throw new DriveError('FUNCTION_NOT_CONFIGURED', 503);
+  }
 }
-async function userFrom(req) {
-  const jwt = req.headers?.['x-appwrite-user-jwt'] || req.headers?.['X-Appwrite-User-JWT'];
-  if (!jwt) throw new Error('AUTH_REQUIRED');
-  const account = new Account(clientForJwt(jwt));
-  return account.get();
+
+const dbId = () => process.env.APPWRITE_DATABASE_ID || 'bhasha-db';
+const tokenCollectionId = () => process.env.APPWRITE_DRIVE_TOKENS_COLLECTION_ID || 'google-drive-tokens';
+function encryptionKey() {
+  const key = Buffer.from(process.env.GOOGLE_TOKEN_ENCRYPTION_SECRET || '', 'base64');
+  if (key.length !== 32) throw new DriveError('FUNCTION_NOT_CONFIGURED', 503);
+  return key;
+}
+
+function json(res, status, responseBody) { return res.json(responseBody, status); }
+function header(req, name) {
+  const wanted = name.toLowerCase();
+  const entry = Object.entries(req.headers || {}).find(([key]) => key.toLowerCase() === wanted);
+  return entry?.[1];
+}
+function body(req) {
+  const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.bodyJson || req.body || {});
+  if (Buffer.byteLength(raw, 'utf8') > MAX_REQUEST_BYTES) throw new DriveError('REQUEST_TOO_LARGE', 413);
+  let parsed;
+  try {
+    parsed = typeof req.bodyJson === 'object' && req.bodyJson !== null ? req.bodyJson : JSON.parse(raw || '{}');
+  } catch (_) {
+    throw new DriveError('INVALID_JSON', 400);
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new DriveError('INVALID_REQUEST', 400);
+  return parsed;
+}
+function userClient(jwt) {
+  return new Client().setEndpoint(process.env.APPWRITE_ENDPOINT).setProject(process.env.APPWRITE_PROJECT_ID).setJWT(jwt);
+}
+function adminClient() {
+  return new Client().setEndpoint(process.env.APPWRITE_ENDPOINT).setProject(process.env.APPWRITE_PROJECT_ID).setKey(process.env.APPWRITE_API_KEY);
+}
+async function authenticate(req) {
+  const jwt = header(req, 'x-appwrite-user-jwt');
+  if (!jwt) throw new DriveError('AUTH_REQUIRED', 401);
+  return new Account(userClient(jwt)).get();
 }
 function encrypt(value) {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(), iv);
   const ciphertext = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
   return `${iv.toString('base64')}.${cipher.getAuthTag().toString('base64')}.${ciphertext.toString('base64')}`;
 }
 function decrypt(value) {
-  const [iv, tag, ciphertext] = value.split('.').map((part) => Buffer.from(part, 'base64'));
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+  try {
+    const parts = String(value).split('.');
+    if (parts.length !== 3) throw new Error('invalid token');
+    const [iv, tag, ciphertext] = parts.map((part) => Buffer.from(part, 'base64'));
+    if (iv.length !== 12 || tag.length !== 16 || ciphertext.length === 0) throw new Error('invalid token');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey(), iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+  } catch (_) {
+    throw new DriveError('DRIVE_RECONNECT_REQUIRED', 409);
+  }
+}
+function validId(value) {
+  const id = String(value || '').trim();
+  if (!/^[A-Za-z0-9_-]{3,200}$/.test(id)) throw new DriveError('INVALID_FILE_ID', 400);
+  return id;
+}
+function validRedirectUri(value) {
+  const uri = String(value || '').trim();
+  const allowed = (process.env.GOOGLE_OAUTH_REDIRECT_URIS || '').split(',').map((item) => item.trim()).filter(Boolean);
+  if (!uri || !allowed.includes(uri)) throw new DriveError('INVALID_REDIRECT_URI', 400);
+  return uri;
 }
 async function oauthTokens(code, redirectUri) {
-  const oauth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, redirectUri);
-  const result = await oauth.getToken(code);
-  if (!result.tokens.refresh_token) throw new Error('GOOGLE_REFRESH_TOKEN_NOT_RETURNED');
+  const cleanCode = String(code || '').trim();
+  if (!cleanCode || cleanCode.length > 4096) throw new DriveError('INVALID_AUTHORIZATION_CODE', 400);
+  const oauth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, validRedirectUri(redirectUri));
+  const result = await oauth.getToken(cleanCode);
+  if (!result.tokens.refresh_token) throw new DriveError('GOOGLE_REFRESH_TOKEN_NOT_RETURNED', 409);
   return result.tokens;
 }
-async function driveForToken(token) {
+function driveForToken(token) {
   const oauth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
   oauth.setCredentials({ refresh_token: decrypt(token) });
   return google.drive({ version: 'v3', auth: oauth });
 }
-
-module.exports = async ({ req, res, log, error }) => {
+async function saveToken(databases, userId, refreshToken) {
+  const data = { userId, refreshToken: encrypt(refreshToken), updatedAt: new Date().toISOString() };
   try {
-    const user = await userFrom(req);
+    // Tokens are server-only rows. Do not grant the mobile client read access,
+    // even though the refresh token is encrypted at rest.
+    await databases.createDocument(dbId(), tokenCollectionId(), userId, data, []);
+  } catch (err) {
+    if (err.code !== 409) throw err;
+    await databases.updateDocument(dbId(), tokenCollectionId(), userId, data, []);
+  }
+}
+
+class DriveError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'DriveError';
+    this.status = status;
+  }
+}
+
+async function handler({ req, res, error = () => {} }) {
+  try {
+    validateEnvironment();
+    const user = await authenticate(req);
     const input = body(req);
-    const route = input.action;
-    const databases = new Databases(clientForJwt(req.headers['x-appwrite-user-jwt']));
+    const route = String(input.action || '');
+    const databases = new Databases(adminClient());
 
     if (route === 'exchange') {
-      const tokens = await oauthTokens(String(input.code || ''), String(input.redirectUri || ''));
-      await databases.createDocument(dbId, 'google-drive-tokens', user.$id, {
-        userId: user.$id,
-        refreshToken: encrypt(tokens.refresh_token),
-        updatedAt: new Date().toISOString(),
-      }, [`read("user:${user.$id}")`, `update("user:${user.$id}")`, `delete("user:${user.$id}")`]);
+      const tokens = await oauthTokens(input.code, input.redirectUri);
+      await saveToken(databases, user.$id, tokens.refresh_token);
       return json(res, 200, { connected: true });
     }
 
-    const tokenRows = await databases.listDocuments(dbId, 'google-drive-tokens', [Query.equal('userId', user.$id), Query.limit(1)]);
-    if (!tokenRows.documents.length) return json(res, 409, { error: 'DRIVE_NOT_CONNECTED' });
-    const token = tokenRows.documents[0];
-    const drive = await driveForToken(token.refreshToken);
+    let token;
+    try {
+      token = await databases.getDocument(dbId(), tokenCollectionId(), user.$id);
+    } catch (err) {
+      if (err.code === 404) return json(res, 409, { error: 'DRIVE_NOT_CONNECTED' });
+      throw err;
+    }
+    // The deterministic document ID and this check prevent cross-user token use
+    // even if the backing collection is accidentally misconfigured.
+    if (token.userId !== user.$id) throw new DriveError('DRIVE_NOT_CONNECTED', 409);
 
+    if (route === 'revoke') {
+      const refreshToken = decrypt(token.refreshToken);
+      const oauth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+      try {
+        await oauth.revokeToken(refreshToken);
+      } catch (err) {
+        // An already-revoked Google token must not stop local disconnection.
+        error(`Google token revoke failed for user ${user.$id}: ${err.message || 'unknown error'}`);
+      }
+      await databases.deleteDocument(dbId(), tokenCollectionId(), token.$id);
+      return json(res, 200, { revoked: true });
+    }
+
+    const drive = driveForToken(token.refreshToken);
     if (route === 'metadata') {
-      const result = await drive.files.get({ fileId: String(input.fileId), fields: 'id,name,mimeType,webViewLink,parents,modifiedTime,size' });
+      const result = await drive.files.get({
+        fileId: validId(input.fileId),
+        fields: 'id,name,mimeType,webViewLink,parents,modifiedTime,size',
+        supportsAllDrives: true,
+      });
       return json(res, 200, { file: result.data });
     }
     if (route === 'folder') {
-      const result = await drive.files.create({ requestBody: { name: String(input.name || 'Bhasha Documents'), mimeType: 'application/vnd.google-apps.folder' }, fields: 'id,name,mimeType,parents' });
+      const name = String(input.name || 'Bhasha Documents').trim();
+      if (!name || name.length > 255) throw new DriveError('INVALID_FOLDER_NAME', 400);
+      const parentId = input.parentId == null ? null : validId(input.parentId);
+      const result = await drive.files.create({
+        requestBody: {
+          name,
+          mimeType: 'application/vnd.google-apps.folder',
+          ...(parentId ? { parents: [parentId] } : {}),
+        },
+        fields: 'id,name,mimeType,parents',
+        supportsAllDrives: true,
+      });
       return json(res, 200, { folder: result.data });
     }
-    if (route === 'revoke') {
-      const oauth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
-      await oauth.revokeToken(decrypt(token.refreshToken));
-      await databases.deleteDocument(dbId, 'google-drive-tokens', token.$id);
-      return json(res, 200, { revoked: true });
-    }
-    return json(res, 400, { error: 'UNKNOWN_ACTION' });
+    throw new DriveError('UNKNOWN_ACTION', 400);
   } catch (err) {
-    if (err.message === 'AUTH_REQUIRED') return json(res, 401, { error: err.message });
+    if (err instanceof DriveError) return json(res, err.status, { error: err.message });
     error(err.stack || String(err));
     return json(res, 500, { error: 'FUNCTION_FAILED' });
   }
-};
+}
+
+module.exports = handler;
+module.exports._test = { body, encrypt, decrypt, validId, validRedirectUri, DriveError };

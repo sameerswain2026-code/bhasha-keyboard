@@ -43,9 +43,22 @@ jobs:
           test -s android/key.properties
 
       - run: flutter pub get
-      - run: dart format .
+      - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Validate backend gateways
+        working-directory: functions
+        run: |
+          npm ci
+          npm run check
+          npm test
+          npm audit --omit=dev --audit-level=moderate
 
       - name: Build signed ARM64 release APK
         run: >-

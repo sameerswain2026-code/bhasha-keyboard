@@ -12,8 +12,17 @@ plugins {
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    FileInputStream(keystorePropertiesFile).use(keystoreProperties::load)
 }
+val signingPropertyNames = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+val hasCompleteSigningProperties = signingPropertyNames.all { name ->
+    val value = keystoreProperties.getProperty(name)?.trim().orEmpty()
+    value.isNotEmpty() && value != "CHANGE_ME"
+}
+val releaseKeystoreFile = keystoreProperties.getProperty("storeFile")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { file(it) }
+val hasReleaseSigning = hasCompleteSigningProperties && releaseKeystoreFile?.isFile == true
 
 android {
     namespace = "com.bhashakeyboard.ime"
@@ -41,11 +50,11 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+            if (hasReleaseSigning) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = releaseKeystoreFile
+                storePassword = keystoreProperties.getProperty("storePassword")
             }
         }
     }
@@ -58,7 +67,7 @@ android {
             // Do not assign an incomplete signing config while Gradle is
             // configuring debug variants. The release task guard below still
             // blocks every release artifact without key.properties.
-            if (keystorePropertiesFile.exists()) {
+            if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true
@@ -70,10 +79,13 @@ android {
 // Debug builds remain usable for local development; release builds must have
 // an explicit upload keystore and are blocked otherwise.
 tasks.configureEach {
-    if (name == "assembleRelease" || name == "bundleRelease") {
+    val createsReleaseArtifact =
+        (name.startsWith("assemble") || name.startsWith("bundle") || name.startsWith("package")) &&
+            name.endsWith("Release")
+    if (createsReleaseArtifact) {
         doFirst {
-            check(keystorePropertiesFile.exists()) {
-                "Release signing is not configured. Create android/key.properties locally or provide CI signing secrets before building a release artifact."
+            check(hasReleaseSigning) {
+                "Release signing is incomplete. Configure all values in android/key.properties and ensure storeFile points to an existing keystore."
             }
         }
     }
