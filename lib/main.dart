@@ -439,17 +439,17 @@ class _CompanionDashboardState extends State<CompanionDashboard> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          _StatusChip(
+                          _AvailabilityChip(
                             label: 'AI tools',
                             available: CloudConfig.aiGatewayConfigured,
                           ),
-                          _StatusChip(
+                          _AvailabilityChip(
                             label: 'Drive',
                             available:
                                 user != null &&
                                 CloudConfig.driveGatewayConfigured,
                           ),
-                          const _StatusChip(
+                          const _AvailabilityChip(
                             label: 'Offline typing',
                             available: true,
                           ),
@@ -511,8 +511,8 @@ class _DashboardAction extends StatelessWidget {
   );
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.available});
+class _AvailabilityChip extends StatelessWidget {
+  const _AvailabilityChip({required this.label, required this.available});
 
   final String label;
   final bool available;
