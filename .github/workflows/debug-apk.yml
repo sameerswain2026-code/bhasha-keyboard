@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - feat/secure-cloud-linked-documents
+      - arena/01a0894d-bhasha-keyboard
 
 permissions:
   contents: read
