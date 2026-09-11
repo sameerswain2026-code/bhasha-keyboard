@@ -49,12 +49,17 @@ void main() {
   );
 
   test('Native mode exposes RTL Arabic-family characters', () {
-    final layout = layoutPageFor(
-      LanguageRegistry.byId('ur'),
-      ScriptMode.native,
-      0,
-    );
-    final characters = layout.rows.expand((row) => row).toSet();
+    final pack = LanguageRegistry.byId('ur');
+    final characters = <String>{};
+    for (
+      var page = 0;
+      page < nativePageCount(pack, ScriptMode.native);
+      page++
+    ) {
+      characters.addAll(
+        layoutPageFor(pack, ScriptMode.native, page).rows.expand((row) => row),
+      );
+    }
     expect(
       characters,
       containsAll(<String>['ا', 'ب', 'پ', 'ٹ', 'ت', 'ک', 'ی', 'ے']),
