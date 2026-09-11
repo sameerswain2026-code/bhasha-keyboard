@@ -964,48 +964,6 @@ class _AlphaLayer extends StatelessWidget {
   }
 }
 
-class _ScrollableKeyRow extends StatelessWidget {
-  final List<Widget> children;
-  final bool centered;
-  final bool fixedWidth;
-
-  const _ScrollableKeyRow({
-    required this.children,
-    this.centered = false,
-    this.fixedWidth = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Normal language rows must use the complete available width. The old
-    // fixed 58dp keys overflowed on narrow phones and hid the rightmost keys
-    // behind the IME window. Very long inventories keep horizontal scrolling
-    // as an intentional fallback.
-    if (children.length <= 12 && !fixedWidth) {
-      return SizedBox(
-        height: 58,
-        child: Row(
-          mainAxisAlignment: centered
-              ? MainAxisAlignment.center
-              : MainAxisAlignment.start,
-          children: children,
-        ),
-      );
-    }
-    final row = SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: centered
-            ? MainAxisAlignment.center
-            : MainAxisAlignment.start,
-        children: children,
-      ),
-    );
-    return SizedBox(height: 58, child: row);
-  }
-}
-
 class _GridLayer extends StatelessWidget {
   final KeyboardController kb;
   final LayoutRows layout;
