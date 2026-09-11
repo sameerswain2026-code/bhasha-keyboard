@@ -57,7 +57,7 @@ void main() {
     final characters = layout.rows.expand((row) => row).toSet();
     expect(
       characters,
-      containsAll(<String>['ا', 'ب', 'پ', 'ٹ', 'ڑ', 'ں', 'ے']),
+      containsAll(<String>['ا', 'ب', 'پ', 'ٹ', 'ت', 'ک', 'ی', 'ے']),
     );
   });
 
