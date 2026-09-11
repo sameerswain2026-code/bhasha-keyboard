@@ -152,8 +152,14 @@ class _ManualTranslatePanelState extends State<ManualTranslatePanel> {
                 children: [
                   Container(
                     width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 34, maxHeight: 42),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    constraints: const BoxConstraints(
+                      minHeight: 34,
+                      maxHeight: 42,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: t.keyBg,
                       borderRadius: BorderRadius.circular(8),

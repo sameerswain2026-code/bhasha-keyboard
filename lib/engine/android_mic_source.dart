@@ -37,12 +37,9 @@ class AndroidMicSource implements MicAudioSource {
 
     // This subscription installs the native EventChannel sink before the
     // caller receives the stream and subscribes to it.
-    _nativeSubscription = _mic.receiveBroadcastStream().listen(
-      (event) {
-        if (event is List) controller.add(event.cast<int>());
-      },
-      onError: controller.addError,
-    );
+    _nativeSubscription = _mic.receiveBroadcastStream().listen((event) {
+      if (event is List) controller.add(event.cast<int>());
+    }, onError: controller.addError);
 
     controller.onListen = () async {
       final ok = await _system.invokeMethod<bool>('startMic');
