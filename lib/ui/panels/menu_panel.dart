@@ -27,7 +27,6 @@ class _MenuItem {
 
 const List<_MenuItem> _items = [
   _MenuItem(Icons.palette_outlined, 'Theme', panel: ActivePanel.theme),
-  _MenuItem(Icons.cloud_outlined, 'Documents', panel: ActivePanel.documents),
   _MenuItem(
     Icons.translate,
     'Manual Translate',

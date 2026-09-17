@@ -284,8 +284,7 @@ class SettingsPanel extends StatelessWidget {
                     style: TextStyle(fontSize: 13, color: t.keyText),
                   ),
                   subtitle: Text(
-                    'AI: ${CloudConfig.aiGatewayConfigured ? 'available' : 'off'} · '
-                    'Drive: ${CloudConfig.driveGatewayConfigured ? 'available' : 'off'}',
+                    'AI: ${CloudConfig.aiGatewayConfigured ? 'available' : 'off'}',
                     style: TextStyle(fontSize: 11, color: t.keyTextSecondary),
                   ),
                   onTap: () => showDialog<void>(
@@ -294,7 +293,7 @@ class SettingsPanel extends StatelessWidget {
                       title: Text('Your privacy controls'),
                       content: Text(
                         'Normal typing, local suggestions, emoji and themes stay on this device. '
-                        'Text, audio or document metadata leaves the device only after you explicitly use an AI, voice, translation or cloud action. '
+                        'Text, audio leaves the device only after you explicitly use an AI, voice or translation action. '
                         'Provider credentials are kept in authenticated server functions, never in the keyboard app.',
                       ),
                     ),

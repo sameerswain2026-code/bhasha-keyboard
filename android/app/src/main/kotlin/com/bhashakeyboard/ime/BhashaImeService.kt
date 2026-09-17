@@ -3,12 +3,8 @@ package com.bhashakeyboard.ime
 import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.BroadcastReceiver
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -65,10 +61,6 @@ class BhashaImeService : InputMethodService() {
     private var textToSpeech: TextToSpeech? = null
     private var keyboardRoot: FrameLayout? = null
     private var keyboardScale = 1.0f
-    private var pendingDocumentAuth: MethodChannel.Result? = null
-    private var pendingDocumentPick: MethodChannel.Result? = null
-    private var documentAuthReceiver: BroadcastReceiver? = null
-    private var documentPickReceiver: BroadcastReceiver? = null
 
     /// Set true immediately before WE mutate the host's text via
     /// applyDiff/deleteHostSelection, cleared the moment the resulting
@@ -273,68 +265,6 @@ class BhashaImeService : InputMethodService() {
             }
         }
 
-        // Files are handed to the current app using Android's IME content
-        // API. No file bytes are read by Bhasha and no upload is sent to a
-        // Bhasha server. The IME launches a one-shot device-credential gate
-        // and receives only its boolean result through the package-scoped
-        // broadcast below.
-        MethodChannel(
-            engine.dartExecutor.binaryMessenger, "bhasha/documents"
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "pickDocument" -> {
-                    pendingDocumentPick = result
-                    startActivity(Intent(this, MainActivity::class.java).apply {
-                        action = "com.bhashakeyboard.OPEN_DOCUMENT_PICKER"
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    })
-                }
-                "authenticateDocument" -> {
-                    pendingDocumentAuth = result
-                    startActivity(Intent(this, DocumentAuthActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    })
-                }
-                "commitDocument" -> {
-                    val uri = call.argument<String>("uri")?.let(Uri::parse)
-                    val mime = call.argument<String>("mimeType") ?: "application/octet-stream"
-                    val description = call.argument<String>("displayName") ?: "Document"
-                    val ic = currentInputConnection
-                    if (uri == null || android.os.Build.VERSION.SDK_INT < 25) {
-                        result.success(false)
-                    } else {
-                        val content = InputContentInfo(uri, android.content.ClipDescription(description, arrayOf(mime)), null)
-                        val committed = ic?.commitContent(content, 1, Bundle()) == true
-                        if (committed) {
-                            result.success(true)
-                        } else {
-                            // Some editors do not advertise commitContent. Use the
-                            // platform chooser without copying bytes to Bhasha.
-                            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                                type = mime
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }, "Choose app to attach document").apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            })
-                            result.success(true)
-                        }
-                    }
-                }
-                "releaseDocument" -> {
-                    val uri = call.argument<String>("uri")?.let(Uri::parse)
-                    if (uri != null) {
-                        runCatching {
-                            contentResolver.releasePersistableUriPermission(
-                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                            )
-                        }
-                    }
-                    result.success(true)
-                }
-                else -> result.notImplemented()
-            }
-        }
         MethodChannel(
             engine.dartExecutor.binaryMessenger, "bhasha/ime_media"
         ).setMethodCallHandler { call, result ->
@@ -378,32 +308,6 @@ class BhashaImeService : InputMethodService() {
 
         flutterEngine = engine
 
-        documentAuthReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                pendingDocumentAuth?.success(intent?.getBooleanExtra("authenticated", false) == true)
-                pendingDocumentAuth = null
-            }
-        }
-        registerReceiver(documentAuthReceiver, IntentFilter("com.bhashakeyboard.DOCUMENT_AUTH"), RECEIVER_NOT_EXPORTED)
-
-        documentPickReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                val uri = intent?.getStringExtra("uri")
-                if (uri.isNullOrEmpty()) {
-                    pendingDocumentPick?.success(null)
-                } else {
-                    pendingDocumentPick?.success(
-                        mapOf(
-                            "uri" to uri,
-                            "displayName" to (intent?.getStringExtra("displayName") ?: "Document"),
-                            "mimeType" to (intent?.getStringExtra("mimeType") ?: "application/octet-stream"),
-                        )
-                    )
-                }
-                pendingDocumentPick = null
-            }
-        }
-        registerReceiver(documentPickReceiver, IntentFilter("com.bhashakeyboard.DOCUMENT_PICK"), RECEIVER_NOT_EXPORTED)
 
         // Watch the SYSTEM clipboard (not just our own copy button) so
         // that copying text in ANY app (long-press -> Copy in WhatsApp,
@@ -614,12 +518,6 @@ class BhashaImeService : InputMethodService() {
             PackageManager.PERMISSION_GRANTED
 
     override fun onDestroy() {
-        documentAuthReceiver?.let { runCatching { unregisterReceiver(it) } }
-        documentAuthReceiver = null
-        documentPickReceiver?.let { runCatching { unregisterReceiver(it) } }
-        documentPickReceiver = null
-        pendingDocumentAuth?.error("SERVICE_STOPPED", "Keyboard service stopped", null)
-        pendingDocumentAuth = null
         clipListener?.let { clipboardManager?.removePrimaryClipChangedListener(it) }
         micStream?.stopRecording()
         selfChangeReset?.let { mainHandler.removeCallbacks(it) }
