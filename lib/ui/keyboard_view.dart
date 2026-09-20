@@ -1193,13 +1193,17 @@ class _BottomRow extends StatelessWidget {
           },
         ),
         KeyWidget(
-          label: '  ',
+          // Keep the discoverable hint explicit: holding the spacebar opens
+          // the language selector, as users expect from Gboard.
+          label: 'English',
+          fontSize: 13,
           flex: 8,
           heightScale: scale,
           onTap: () async {
             await kb.keyPressedDuringVoice();
             kb.insertText(' ');
           },
+          onLongPressStart: () => kb.togglePanel(ActivePanel.language),
         ),
         KeyWidget(
           label: '.',

@@ -3,12 +3,15 @@
 library;
 
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 import 'mic_source.dart';
 
 class AndroidMicSource implements MicAudioSource {
   static const MethodChannel _system = MethodChannel('bhasha/system');
   static const EventChannel _mic = EventChannel('bhasha/mic');
+  StreamSubscription<dynamic>? _nativeSubscription;
+  StreamController<List<int>>? _controller;
 
   @override
   Future<bool> hasPermission() async {
@@ -25,13 +28,26 @@ class AndroidMicSource implements MicAudioSource {
 
   @override
   Future<Stream<List<int>>> start() async {
+    if (_controller != null) return _controller!.stream;
+    // Attach the native EventChannel listener before AudioRecord starts.
+    // A controller buffers the first chunks until SarvamSpeechProvider adds
+    // its listener, avoiding a race that made short utterances disappear.
+    final controller = StreamController<List<int>>();
+    _controller = controller;
+    _nativeSubscription = _mic.receiveBroadcastStream().listen(
+      (event) => controller.add((event as List).cast<int>()),
+      onError: controller.addError,
+      onDone: controller.close,
+    );
     final ok = await _system.invokeMethod<bool>('startMic');
     if (ok != true) {
+      await _nativeSubscription?.cancel();
+      _nativeSubscription = null;
+      await controller.close();
+      _controller = null;
       throw StateError('Microphone unavailable');
     }
-    return _mic.receiveBroadcastStream().map(
-      (event) => (event as List).cast<int>(),
-    );
+    return controller.stream;
   }
 
   @override
@@ -39,5 +55,9 @@ class AndroidMicSource implements MicAudioSource {
     try {
       await _system.invokeMethod('stopMic');
     } catch (_) {}
+    await _nativeSubscription?.cancel();
+    _nativeSubscription = null;
+    await _controller?.close();
+    _controller = null;
   }
 }

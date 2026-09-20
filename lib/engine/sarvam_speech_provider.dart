@@ -179,7 +179,10 @@ class SarvamSpeechProvider implements SpeechProvider {
               'audio': {
                 'data': base64Encode(chunk),
                 'sample_rate': sampleRate,
-                'encoding': 'audio/wav',
+                // These chunks are raw PCM16LE bytes, not a WAV container.
+                // Match the input_audio_codec query parameter so Sarvam can
+                // decode each realtime chunk correctly.
+                'encoding': 'pcm_s16le',
               },
             }),
           );

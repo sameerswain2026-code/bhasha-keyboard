@@ -58,9 +58,14 @@ class MicStreamHandler : EventChannel.StreamHandler {
             rec.release()
             return
         }
+        try {
+            rec.startRecording()
+        } catch (_: Exception) {
+            rec.release()
+            return
+        }
         recorder = rec
         recording.set(true)
-        rec.startRecording()
         thread = Thread {
             val buffer = ByteArray(CHUNK_BYTES)
             while (recording.get()) {
@@ -78,12 +83,17 @@ class MicStreamHandler : EventChannel.StreamHandler {
 
     fun stopRecording() {
         if (!recording.getAndSet(false)) return
-        thread?.join(300)
-        thread = null
+        // Stop the native read immediately so the worker thread is released
+        // before join; waiting first can leave AudioRecord blocked and make
+        // the next voice session fail to acquire the microphone.
         recorder?.let {
             try {
                 it.stop()
             } catch (_: Exception) {}
+        }
+        thread?.join(300)
+        thread = null
+        recorder?.let {
             it.release()
         }
         recorder = null

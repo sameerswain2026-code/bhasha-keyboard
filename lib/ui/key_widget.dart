@@ -66,7 +66,9 @@ class _KeyWidgetState extends State<KeyWidget> {
     final fg = widget.active ? t.accentText : t.keyText;
 
     final key = Padding(
-      padding: const EdgeInsets.all(1.5),
+      // Preserve a generous hit target while reducing gutters that make
+      // neighbouring alphabet keys feel too small on narrow IME windows.
+      padding: const EdgeInsets.all(1),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _pressed = true),
@@ -99,7 +101,7 @@ class _KeyWidgetState extends State<KeyWidget> {
           label: widget.label ?? 'Keyboard key',
           liveRegion: false,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 60),
+            duration: const Duration(milliseconds: 35),
             // Four rows at 55dp plus gutters fit the fixed 246dp key-area
             // budget while preserving a comfortable touch target.
             height: 55 * widget.heightScale,
